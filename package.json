@@ -4,7 +4,7 @@
   "description": "Mental Strain Records Website",
   "main": "index.html",
   "scripts": {
-    "dev": "python -m http.server 8000",
+    "dev": "npx http-server -p 8000",
     "deploy": "wrangler pages deploy . --project-name=msr-web"
   },
   "repository": {
