@@ -1,0 +1,43 @@
+# Cloudflare Pages Configuration
+# This file is optional but provides additional configuration options
+
+# Build configuration
+[build]
+  command = ""
+  publish = "/"
+
+# Environment variables (if needed in future)
+[build.environment]
+  # Add environment variables here if needed
+
+# Headers for security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache static assets
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Redirects (examples - uncomment and modify as needed)
+# [[redirects]]
+#   from = "/old-path"
+#   to = "/new-path"
+#   status = 301
+
+# 404 page handling
+[[redirects]]
+  from = "/404.html"
+  to = "/index.html"
+  status = 404
