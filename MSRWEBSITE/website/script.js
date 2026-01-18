@@ -4,7 +4,7 @@ const albums = [
         slug: "of-all-time-vol2",
         title: "Of All Time Vol. 2",
         artist: "kwebspost",
-        cover: "./MSR WEB IMGS/oat2.jpg",
+        cover: "./assets/oat2.jpg",
         releaseDate: "2025-05-01",
         label: "Mental Strain Records",
         releaseNumber: "MSR-003",
@@ -49,7 +49,7 @@ const albums = [
         slug: "post-kwebs",
         title: "POST KWEBS",
         artist: "kwebspost",
-        cover: "./MSR WEB IMGS/post-kwebs.jpg",
+        cover: "./assets/post-kwebs.jpg",
         releaseDate: "2024-10-10",
         label: "Mental Strain Records",
         releaseNumber: "MSR-002",
@@ -80,7 +80,7 @@ const albums = [
         slug: "wayne-street",
         title: "Wayne Street",
         artist: "kwebspost",
-        cover: "./MSR WEB IMGS/wayne-street.jpg",
+        cover: "./assets/wayne-street.jpg",
         releaseDate: "2023-09-01",
         label: "Mental Strain Records",
         releaseNumber: "MSR-001",
@@ -116,7 +116,7 @@ const albums = [
         slug: "of-all-time",
         title: "Of All Time",
         artist: "kwebspost",
-        cover: "./MSR WEB IMGS/of-all-time.jpg",
+        cover: "./assets/of-all-time.jpg",
         releaseDate: "2023-04-15",
         label: "No Label",
         releaseNumber: "KWB-004",
@@ -163,7 +163,7 @@ const albums = [
         slug: "octnov",
         title: "Octnov",
         artist: "kwebspost",
-        cover: "./MSR WEB IMGS/octnov.jpg",
+        cover: "./assets/octnov.jpg",
         releaseDate: "2022-12-14",
         label: "No Label",
         releaseNumber: "KWB-003",
@@ -195,7 +195,7 @@ const albums = [
         slug: "scintillating",
         title: "Scintillating",
         artist: "kwebspost",
-        cover: "./MSR WEB IMGS/scintillating.jpg",
+        cover: "./assets/scintillating.jpg",
         releaseDate: "2022-06-30",
         label: "No Label",
         releaseNumber: "KWB-002",
@@ -225,7 +225,7 @@ const albums = [
         slug: "unlikely",
         title: "Unlikely",
         artist: "kwebspost",
-        cover: "./MSR WEB IMGS/unlikely.jpg",
+        cover: "./assets/unlikely.jpg",
         releaseDate: "2022-05-13",
         label: "No Label",
         releaseNumber: "KWB-001",
@@ -331,7 +331,7 @@ function renderAboutPage() {
                 <h4>kwebspost</h4>
                 <p>Experimental rock, based in Penticton, B.C.</p>
 
-                <img src="./MSR WEB IMGS/kwebspostimg.jpg" alt="kwebspost" class="artist-image">
+                <img src="./assets/kwebspostimg.jpg" alt="kwebspost" class="artist-image">
 
                 <div class="artist-links">
                      <a href="https://open.spotify.com/artist/3AfA9MhbMBjEqjgMXAEDjp?si=Nkv010lFQyiD4BI13Gzq-A" target="_blank" rel="noopener" class="streaming-button">
