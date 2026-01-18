@@ -495,7 +495,9 @@ footer a:hover {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 80vh; /* Take up most of the viewport */
+    height: auto;
+    max-height: calc(100vh - 180px); /* leave room for header + fixed footer */
+    overflow: visible; /* Allow 3D transforms to extend outside */
 }
 
 #album-details.expanded-view .album-details-info {
@@ -514,11 +516,11 @@ footer a:hover {
 }
 
 #album-details.expanded-view img {
-    max-height: 80vh; /* Limit height to viewport */
-    max-width: 90vw; /* Limit width to viewport to prevent horizontal scroll on mobile */
+    max-height: calc(100vh - 240px); /* fit within viewport without creating scrollbars */
+    max-width: min(900px, 92vw); /* keep large but cap it on desktop */
     width: auto; /* Maintain aspect ratio */
     object-fit: contain;
-    cursor: default; /* Reset cursor */
+    cursor: pointer; /* click again to return */
     transition: transform 0.05s linear; /* Smooth, quick updates for 3D effect */
     transform-style: preserve-3d;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5); /* Enhance depth */
@@ -528,10 +530,8 @@ footer a:hover {
     cursor: pointer; /* Indicate clickability */
 }
 
-#close-expanded-btn {
-    margin-top: 20px; /* Space between image and button */
-}
-
+/* Close button removed: clicking the image toggles expanded view */
+#close-expanded-btn,
 #close-expanded-btn.hidden {
     display: none;
 }

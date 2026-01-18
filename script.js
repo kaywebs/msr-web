@@ -256,6 +256,23 @@ let gridScrollPosition = 0;
 
 const qs = (html) => html.trim();
 
+function resetExpandedAlbumView() {
+    albumDetails.classList.remove("expanded-view");
+
+    const closeExpandedBtn = document.getElementById("close-expanded-btn");
+    closeExpandedBtn?.classList.add("hidden");
+
+    const img = document.getElementById("album-cover-image");
+    if (img) {
+        img.style.transform = "";
+        img.style.transition = "";
+    }
+
+    clearTimeout(idleTimer);
+    if (swayFrame) cancelAnimationFrame(swayFrame);
+    swayFrame = null;
+}
+
 function updateMetadata(title, description) {
     document.title = title;
 
@@ -269,6 +286,8 @@ function updateMetadata(title, description) {
 }
 
 function renderAlbumGrid() {
+    resetExpandedAlbumView();
+
     updateMetadata(
         "Mental Strain Records",
         "Mental Strain Records - The home of kwebspost. Listen to albums like Of All Time Vol.2, Wayne Street, and more!."
@@ -300,6 +319,8 @@ function renderAlbumGrid() {
 }
 
 function renderAboutPage() {
+    resetExpandedAlbumView();
+
     if (!albumList.classList.contains("hidden")) {
         gridScrollPosition = window.scrollY;
     }
@@ -362,6 +383,8 @@ function renderAboutPage() {
 }
 
 function renderAlbumDetails(slug) {
+    resetExpandedAlbumView();
+
     const album = albums.find((a) => a.slug === slug);
     if (!album) return renderAlbumGrid();
 
@@ -439,19 +462,17 @@ function renderAlbumDetails(slug) {
     const closeExpandedBtn = document.getElementById("close-expanded-btn");
 
     coverImg.onclick = () => {
-        albumDetails.classList.add("expanded-view");
-        closeExpandedBtn.classList.remove("hidden");
-        startSwayAnimation(coverImg, 0, 0);
+        if (albumDetails.classList.contains("expanded-view")) {
+            resetExpandedAlbumView();
+        } else {
+            albumDetails.classList.add("expanded-view");
+            closeExpandedBtn.classList.remove("hidden");
+            startSwayAnimation(coverImg, 0, 0);
+        }
     };
 
     closeExpandedBtn.onclick = () => {
-        albumDetails.classList.remove("expanded-view");
-        closeExpandedBtn.classList.add("hidden");
-        coverImg.style.transform = "";
-
-        clearTimeout(idleTimer);
-        if (swayFrame) cancelAnimationFrame(swayFrame);
-        swayFrame = null;
+        resetExpandedAlbumView();
     };
 }
 
