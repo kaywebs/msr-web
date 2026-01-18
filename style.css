@@ -440,10 +440,33 @@ footer a:hover {
 }
 
 @media (max-width: 768px) {
+    header, main {
+        width: 100%; /* Maximize width on mobile */
+        padding-left: 15px; /* Reduce horizontal padding */
+        padding-right: 15px;
+        box-sizing: border-box; /* Ensure padding doesn't cause overflow */
+    }
+
+    main {
+        padding-top: 1rem;
+        padding-bottom: 80px; /* Ensure space for fixed footer */
+    }
+
+    header {
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+
     #album-details {
         flex-direction: column; /* Stack content vertically */
         align-items: center; /* Center content horizontally */
         text-align: center; /* Center text */
+        padding: 0; /* Remove inner padding so it relies on main's padding */
+        gap: 1rem; /* Reduce gap */
+    }
+
+    #about-page {
+        padding: 0; /* Remove inner padding so it relies on main's padding */
     }
 
     .album-details-cover {

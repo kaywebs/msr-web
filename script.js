@@ -427,7 +427,7 @@ function renderAlbumDetails(slug) {
 
       <h2>${album.title}</h2>
       <p><strong>${album.artist}</strong></p>
-      <p><em>${album.label}  ${album.releaseNumber} (${album.releaseDate})</em></p>
+      <p><em>${album.label} - ${album.releaseNumber} (${album.releaseDate})</em></p>
 
       <h3>Tracklist</h3>
       <ul id="track-list">
