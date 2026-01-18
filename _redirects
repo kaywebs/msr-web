@@ -4,6 +4,3 @@
 
 # Example redirects (uncomment and modify as needed)
 # /old-path /new-path 301
-
-# Fallback to home page for non-existent routes (SPA behavior)
-/* /index.html 200
