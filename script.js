@@ -9,6 +9,7 @@ const albums = [
         label: "Mental Strain Records",
         releaseNumber: "MSR-003",
         description: "A fantastic release by kwebspost.",
+        playingSong: "Echoes for No One",
         credits: {
             "Producer": "Tyler Witkowski",
             "Mixer": "Tyler Witkowski",
@@ -54,6 +55,7 @@ const albums = [
         label: "Mental Strain Records",
         releaseNumber: "MSR-002",
         description: "A fantastic release by kwebspost.",
+        playingSong: "We Have Time",
         credits: {
             "Producer": "Tyler Witkowski",
             "Mixer": "Tyler Witkowski",
@@ -85,6 +87,7 @@ const albums = [
         label: "Mental Strain Records",
         releaseNumber: "MSR-001",
         description: "A fantastic release by kwebspost.",
+        playingSong: "Dilly Dallying and Lollygagging",
         credits: {
             "Producer": "Tyler Witkowski",
             "Mixer": "Tyler Witkowski",
@@ -121,6 +124,7 @@ const albums = [
         label: "No Label",
         releaseNumber: "KWB-004",
         description: "A fantastic release by kwebspost.",
+        playingSong: "Awful",
         credits: {
             "Producer": "Tyler Witkowski",
             "Mixer": "Tyler Witkowski",
@@ -168,6 +172,7 @@ const albums = [
         label: "No Label",
         releaseNumber: "KWB-003",
         description: "A fantastic release by kwebspost.",
+        playingSong: "Fourth",
         credits: {
             "Producer": "Tyler Witkowski",
             "Mixer": "Tyler Witkowski",
@@ -200,6 +205,7 @@ const albums = [
         label: "No Label",
         releaseNumber: "KWB-002",
         description: "A fantastic release by kwebspost.",
+        playingSong: "Scintillating",
         credits: {
             "Producer": "Tyler Witkowski",
             "Mixer": "Tyler Witkowski",
@@ -230,6 +236,7 @@ const albums = [
         label: "No Label",
         releaseNumber: "KWB-001",
         description: "A fantastic release by kwebspost.",
+        playingSong: "Unlikely",
         credits: {
             "Producer": "Tyler Witkowski",
             "Mixer": "Tyler Witkowski",
@@ -249,10 +256,16 @@ const albums = [
 const albumList = document.getElementById("album-list");
 const albumDetails = document.getElementById("album-details");
 const aboutPage = document.getElementById("about-page");
+const searchContainer = document.getElementById("search-container");
+const searchBar = document.getElementById("search-bar");
+const searchClearBtn = document.getElementById("search-clear");
+const nowPlayingEl = document.getElementById("now-playing");
+const mainElement = document.querySelector("main");
 
 let idleTimer;
 let swayFrame;
 let gridScrollPosition = 0;
+let currentAudio = null;
 
 const qs = (html) => html.trim();
 
@@ -262,15 +275,34 @@ function resetExpandedAlbumView() {
     const closeExpandedBtn = document.getElementById("close-expanded-btn");
     closeExpandedBtn?.classList.add("hidden");
 
+    const audioControls = document.getElementById("audio-controls");
+    const footerEmail = document.querySelector(".footer-email");
+
+    audioControls?.classList.add("hidden");
+    footerEmail?.classList.remove("hidden"); // Show email when audio controls hide
+    nowPlayingEl.classList.add("hidden"); // Hide playing song when closing expanded view
+
     const img = document.getElementById("album-cover-image");
     if (img) {
         img.style.transform = "";
         img.style.transition = "";
     }
 
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+
     clearTimeout(idleTimer);
     if (swayFrame) cancelAnimationFrame(swayFrame);
     swayFrame = null;
+}
+
+function formatTime(seconds) {
+    if (isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
 function updateMetadata(title, description) {
@@ -293,10 +325,33 @@ function renderAlbumGrid() {
         "Mental Strain Records - The home of kwebspost. Listen to albums like Of All Time Vol.2, Wayne Street, and more!."
     );
 
-    if (albumList.children.length === 0) {
-        albumList.innerHTML = albums
-            .map((a) =>
-                qs(`
+    const searchTerm = searchBar.value.toLowerCase();
+    const filteredAlbums = albums.filter(a => 
+        a.title.toLowerCase().includes(searchTerm) || 
+        a.artist.toLowerCase().includes(searchTerm)
+    );
+
+    const currentSlugs = Array.from(albumList.querySelectorAll('.album')).map(el => el.dataset.slug);
+    const newSlugs = filteredAlbums.map(a => a.slug);
+    const hasNoResultsMessage = albumList.querySelector("p") !== null;
+
+    let shouldRender = false;
+
+    if (filteredAlbums.length === 0) {
+        if (!hasNoResultsMessage) shouldRender = true;
+    } else {
+        if (currentSlugs.length !== newSlugs.length || !currentSlugs.every((s, i) => s === newSlugs[i])) {
+            shouldRender = true;
+        }
+    }
+
+    if (shouldRender) {
+        if (filteredAlbums.length === 0) {
+            albumList.innerHTML = "<p style='padding: 1rem; color: #aaa; text-align: center; grid-column: 1 / -1;'>No albums found matching your search.</p>";
+        } else {
+            albumList.innerHTML = filteredAlbums
+                .map((a) =>
+                    qs(`
       <div class="album" data-slug="${a.slug}">
         <img src="${a.cover}" alt="${a.title}">
         <div class="album-info">
@@ -305,16 +360,22 @@ function renderAlbumGrid() {
         </div>
       </div>
     `)
-            )
-            .join("");
+                )
+                .join("");
+        }
     }
 
+    const wasHidden = albumList.classList.contains("hidden");
+
+    searchContainer.classList.remove("hidden");
     albumList.classList.remove("hidden");
     albumDetails.classList.add("hidden");
     aboutPage.classList.add("hidden");
 
-    if (gridScrollPosition > 0) {
-        window.scrollTo(0, gridScrollPosition);
+    if (wasHidden && gridScrollPosition > 0) {
+        mainElement.scrollTop = gridScrollPosition;
+    } else if (wasHidden) {
+        mainElement.scrollTop = 0;
     }
 }
 
@@ -322,7 +383,7 @@ function renderAboutPage() {
     resetExpandedAlbumView();
 
     if (!albumList.classList.contains("hidden")) {
-        gridScrollPosition = window.scrollY;
+        gridScrollPosition = mainElement.scrollTop;
     }
 
     updateMetadata("About - Mental Strain Records", "Learn more about Mental Strain Records and our artists.");
@@ -379,7 +440,7 @@ function renderAboutPage() {
     albumDetails.classList.add("hidden");
     aboutPage.classList.remove("hidden");
 
-    window.scrollTo(0, 0);
+    mainElement.scrollTop = 0;
 }
 
 function renderAlbumDetails(slug) {
@@ -389,13 +450,15 @@ function renderAlbumDetails(slug) {
     if (!album) return renderAlbumGrid();
 
     if (!albumList.classList.contains("hidden")) {
-        gridScrollPosition = window.scrollY;
+        gridScrollPosition = mainElement.scrollTop;
     }
 
     updateMetadata(
         `${album.title} - ${album.artist}`,
         album.description || `Listen to ${album.title} by ${album.artist} on Mental Strain Records.`
     );
+
+    searchContainer.classList.add("hidden"); // Hide search bar in details view
 
     albumDetails.innerHTML = qs(`
     <div class="album-details-cover">
@@ -434,7 +497,7 @@ function renderAlbumDetails(slug) {
         ${album.tracks
             .map(
                 (t, i) =>
-                    `<li><span class='track-number'>${i + 1}.</span> ${t.title} <span class='track-length'>${t.length}</span></li>`
+                    `<li class="${t.title === album.playingSong ? 'featured-track' : ''}" ${t.title === album.playingSong ? 'id="featured-track-item"' : ''} title="${t.title === album.playingSong ? 'Click to play' : ''}"><span class='track-number'>${i + 1}.</span> ${t.title} <span class='track-length'>${t.length}</span></li>`
             )
             .join("")}
       </ul>
@@ -452,24 +515,197 @@ function renderAlbumDetails(slug) {
     albumDetails.classList.remove("hidden");
     aboutPage.classList.add("hidden");
 
-    window.scrollTo(0, 0);
+    mainElement.scrollTop = 0;
 
     document.getElementById("back-button").onclick = () => {
+        searchBar.value = "";
+        searchClearBtn.classList.add("hidden");
+        // Scroll position is preserved in gridScrollPosition
         location.hash = "";
     };
 
     const coverImg = document.getElementById("album-cover-image");
     const closeExpandedBtn = document.getElementById("close-expanded-btn");
+    const featuredTrack = document.getElementById("featured-track-item");
 
-    coverImg.onclick = () => {
+    const toggleExpandedView = () => {
         if (albumDetails.classList.contains("expanded-view")) {
             resetExpandedAlbumView();
         } else {
             albumDetails.classList.add("expanded-view");
             closeExpandedBtn.classList.remove("hidden");
+            
+            const audioControls = document.getElementById("audio-controls");
+            const footerEmail = document.querySelector(".footer-email");
+
+            audioControls.classList.remove("hidden");
+            footerEmail.classList.add("hidden"); // Hide email when audio controls show
+
+            if (album.playingSong) {
+                // Separate the label and the song title into different elements
+                nowPlayingEl.innerHTML = `
+                    <span class="now-playing-label">NOW PLAYING:</span>
+                    <div class="now-playing-scroll-container">
+                        <span class="now-playing-content">${album.playingSong}</span>
+                    </div>
+                `;
+                nowPlayingEl.classList.remove("hidden");
+
+                const checkOverflow = () => {
+                    const scrollContainer = nowPlayingEl.querySelector('.now-playing-scroll-container');
+                    const scrollSpan = nowPlayingEl.querySelector('.now-playing-content');
+                    if (!scrollContainer || !scrollSpan) return;
+
+                    const containerWidth = scrollContainer.clientWidth;
+                    const textWidth = scrollSpan.scrollWidth;
+
+                    if (textWidth > containerWidth) {
+                        const duration = textWidth / 50; // Text speed
+                        const distance = -(textWidth - containerWidth); // Scroll just enough to show end
+                        
+                        scrollSpan.style.setProperty('--scroll-duration', `${duration}s`);
+                        scrollSpan.style.setProperty('--scroll-distance', `${distance}px`);
+                        scrollSpan.classList.add('scrolling-text');
+                        scrollContainer.classList.add('mask-enabled'); // Apply mask only when scrolling
+                    } else {
+                        scrollSpan.classList.remove('scrolling-text');
+                        scrollContainer.classList.remove('mask-enabled');
+                        scrollSpan.style.removeProperty('--scroll-duration');
+                        scrollSpan.style.removeProperty('--scroll-distance');
+                    }
+                };
+
+                // Wait for layout to settle before measuring
+                requestAnimationFrame(() => {
+                    checkOverflow();
+                    // Double check in case of font loading or slower layout engines
+                    setTimeout(checkOverflow, 100);
+                });
+
+                // Re-check on window resize
+                window.addEventListener('resize', checkOverflow);
+            }
+
             startSwayAnimation(coverImg, 0, 0);
+
+            if (currentAudio) currentAudio.pause();
+            currentAudio = new Audio(`./assets/audio/${slug}.mp3`);
+            currentAudio.loop = true;
+            
+            const playPauseBtn = document.getElementById("play-pause-btn");
+            const volumeSlider = document.getElementById("volume-slider");
+            const timelineSlider = document.getElementById("timeline-slider");
+            const currentTimeEl = document.getElementById("current-time");
+            const totalTimeEl = document.getElementById("total-time");
+            
+            // Reset controls
+            playPauseBtn.innerHTML = "❚❚";
+            playPauseBtn.title = "Pause";
+            volumeSlider.value = 0.5;
+            timelineSlider.value = 0;
+            timelineSlider.style.background = `linear-gradient(to right, #694EFF 0%, #555 0%)`; // Reset gradient
+            updateTimelineStyle(volumeSlider, 0.5, 1); // Set initial volume gradient
+            currentTimeEl.textContent = "0:00";
+            totalTimeEl.textContent = "0:00";
+            
+            currentAudio.volume = 0.5 * 0.5; // Apply quadratic curve
+                        
+            // Metadata loaded: set total duration
+            currentAudio.onloadedmetadata = () => {
+                totalTimeEl.textContent = formatTime(currentAudio.duration);
+                timelineSlider.max = currentAudio.duration;
+            };
+
+            let isScrubbing = false;
+            let wasPlayingBeforeScrub = false;
+
+            // Time update: move slider and update current time text
+            currentAudio.ontimeupdate = () => {
+                if (!currentAudio || isScrubbing) return;
+                timelineSlider.value = currentAudio.currentTime;
+                currentTimeEl.textContent = formatTime(currentAudio.currentTime);
+                updateTimelineStyle(timelineSlider, currentAudio.currentTime, currentAudio.duration);
+            };
+
+            const startScrubbing = () => {
+                isScrubbing = true;
+                if (!currentAudio.paused) {
+                    wasPlayingBeforeScrub = true;
+                    currentAudio.pause();
+                } else {
+                    wasPlayingBeforeScrub = false;
+                }
+            };
+
+            const stopScrubbing = () => {
+                if (!isScrubbing) return; // Already stopped
+                isScrubbing = false;
+                if (wasPlayingBeforeScrub) {
+                    currentAudio.play().catch(console.error);
+                }
+            };
+
+            // Bind slider events
+            timelineSlider.onmousedown = startScrubbing;
+            timelineSlider.ontouchstart = startScrubbing;
+            
+            // Use onchange (committed) and mouse/touch ends for robustness
+            timelineSlider.onchange = stopScrubbing;
+            timelineSlider.onmouseup = stopScrubbing;
+            timelineSlider.ontouchend = stopScrubbing;
+
+            // Slider input: scrub audio
+            timelineSlider.oninput = (e) => {
+                e.stopPropagation();
+                const time = parseFloat(e.target.value);
+                currentAudio.currentTime = time;
+                currentTimeEl.textContent = formatTime(time);
+                updateTimelineStyle(timelineSlider, time, currentAudio.duration);
+            };
+
+            // Prevent clicks from bubbling
+            timelineSlider.onclick = (e) => e.stopPropagation();
+
+            playPauseBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (!currentAudio) return;
+                
+                if (currentAudio.paused) {
+                    currentAudio.play().then(() => {
+                        playPauseBtn.innerHTML = "❚❚";
+                        playPauseBtn.title = "Pause";
+                    }).catch(console.error);
+                } else {
+                    currentAudio.pause();
+                    playPauseBtn.innerHTML = "▶";
+                    playPauseBtn.title = "Play";
+                }
+            };
+
+            volumeSlider.oninput = (e) => {
+                e.stopPropagation();
+                if (currentAudio) {
+                    const val = e.target.value;
+                    currentAudio.volume = val * val;
+                    updateTimelineStyle(volumeSlider, val, 1);
+                }
+            };
+            
+            volumeSlider.onclick = (e) => e.stopPropagation(); // Prevent bubbling
+
+            currentAudio.play().catch(e => {
+                console.log("No audio found or autoplay blocked", e);
+                playPauseBtn.innerHTML = "▶";
+                playPauseBtn.title = "Play";
+            });
         }
     };
+
+    // Attach click handler to both image and featured track
+    coverImg.onclick = toggleExpandedView;
+    if (featuredTrack) {
+        featuredTrack.onclick = toggleExpandedView;
+    }
 
     closeExpandedBtn.onclick = () => {
         resetExpandedAlbumView();
@@ -493,6 +729,32 @@ albumList.addEventListener("click", (e) => {
     if (album) location.hash = album.dataset.slug;
 });
 
+searchBar.addEventListener("input", () => {
+    if (searchBar.value.trim().length > 0) {
+        searchClearBtn.classList.remove("hidden");
+    } else {
+        searchClearBtn.classList.add("hidden");
+    }
+    renderAlbumGrid();
+});
+
+searchClearBtn.addEventListener("click", () => {
+    searchBar.value = "";
+    searchClearBtn.classList.add("hidden");
+    renderAlbumGrid();
+    searchBar.focus();
+});
+
+document.getElementById("logo-link").addEventListener("click", () => {
+    searchBar.value = "";
+    searchClearBtn.classList.add("hidden");
+    gridScrollPosition = 0;
+    if (!location.hash || location.hash === "#") {
+        renderAlbumGrid();
+        mainElement.scrollTop = 0;
+    }
+});
+
 window.addEventListener("hashchange", router);
 document.addEventListener("DOMContentLoaded", router);
 
@@ -501,6 +763,11 @@ albumList.addEventListener("mouseover", (e) => {
 
     const album = e.target.closest(".album");
     if (!album || (e.relatedTarget && album.contains(e.relatedTarget))) return;
+
+    if (album._colorTimeout) {
+        clearTimeout(album._colorTimeout);
+        album._colorTimeout = null;
+    }
 
     const albumInfo = album.querySelector(".album-info");
     if (!albumInfo) return;
@@ -529,6 +796,16 @@ albumList.addEventListener("mouseout", (e) => {
     if (!album || (e.relatedTarget && album.contains(e.relatedTarget))) return;
 
     album.classList.remove("color-red", "color-green", "color-blue");
+
+    album._colorTimeout = setTimeout(() => {
+        const albumInfo = album.querySelector(".album-info");
+        if (albumInfo) {
+            albumInfo.querySelectorAll("h3, p").forEach((el) => {
+                el.classList.remove("color-red", "color-green", "color-blue");
+            });
+        }
+        album._colorTimeout = null;
+    }, 200);
 });
 
 document.addEventListener("mousemove", (e) => {
@@ -589,5 +866,10 @@ function startSwayAnimation(img, startRotateX, startRotateY) {
     }
 
     swayFrame = requestAnimationFrame(step);
+}
+
+function updateTimelineStyle(slider, value, max) {
+    const percentage = (value / max) * 100;
+    slider.style.background = `linear-gradient(to right, #694EFF ${percentage}%, #555 ${percentage}%)`;
 }
 

@@ -7,11 +7,14 @@ body {
     display: flex;
     flex-direction: column;
     padding: 0;
-    min-height: 100vh; /* Ensure the body takes up the full height of the viewport */
+    height: 100vh; /* Lock body height to viewport */
+    height: 100dvh; /* Use dynamic viewport unit for mobile */
+    overflow: hidden; /* Prevent body scroll */
 }
 
 /* Header Styles */
 header {
+    flex-shrink: 0; /* Prevent header from shrinking */
     padding: 20px 40px;
     display: flex;
     justify-content: space-between;
@@ -62,12 +65,125 @@ nav a:hover {
 /* Main Content and Album Grid */
 main {
     padding: 2rem;
+    padding-bottom: 100px; /* Ensure space for fixed footer on desktop */
     position: relative;
-    min-height: 50vh;
+    /* Removed min-height, now determined by flex */
     width: 75%; /* Increase from 66.67% to 75% */
     max-width: 1400px; /* Optional maximum width */
     margin: 0 auto; /* Center the content */
     flex: 1; /* Allow the main content to grow and push the footer to the bottom */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    justify-content: flex-start; /* Default alignment */
+    overflow-y: auto; /* Enable scrolling within main */
+    -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+}
+
+/* Search Bar Styles */
+#search-container {
+    margin: 0 2rem;
+    display: flex;
+    justify-content: center;
+    flex: 1; /* Allow it to take up available space */
+}
+
+.search-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+}
+
+#search-bar {
+    width: 100%;
+    /* max-width removed as it is controlled by wrapper */
+    padding: 10px 15px;
+    padding-right: 40px; /* Make room for the clear button */
+    font-size: 1rem;
+    border: 1px solid #333;
+    border-radius: 4px; /* Ensure border-radius is applied */
+    background-color: #111;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+#search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    display: block; /* Ensure it takes up space when not hidden */
+}
+
+#search-clear:hover {
+    color: #fff;
+}
+
+#search-clear.hidden {
+    display: none;
+}
+
+#search-bar:focus {
+    border-color: #694EFF; /* Match accent color */
+    box-shadow: 0 0 5px rgba(105, 78, 255, 0.5);
+}
+
+#now-playing {
+    font-size: 0.9rem;
+    color: #FFFFA3;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-right: 15px;
+    max-width: 800px; /* Increased from 300px to allow longer titles */
+    display: flex;
+    align-items: center;
+}
+
+.now-playing-label {
+    color: #FF383F; /* Changed to red accent */
+    white-space: nowrap;
+    margin-right: 5px;
+    flex-shrink: 0;
+}
+
+.now-playing-scroll-container {
+    overflow: hidden;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0; /* Allow flex child to shrink below content size */
+    position: relative;
+}
+
+.now-playing-scroll-container.mask-enabled {
+    mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%);
+}
+
+.now-playing-content {
+    display: inline-block;
+}
+
+.scrolling-text {
+    animation: scroll-text var(--scroll-duration, 10s) linear infinite alternate;
+}
+
+@keyframes scroll-text {
+    0%, 20% { transform: translateX(0); }
+    80%, 100% { transform: translateX(var(--scroll-distance, -100%)); }
+}
+
+#now-playing.hidden {
+    display: none;
 }
 
 .album-grid {
@@ -95,6 +211,18 @@ main {
 
 .album.color-blue {
     border-color: #694EFF;
+}
+
+.album-info .color-red {
+    color: #FF383F;
+}
+
+.album-info .color-green {
+    color: #FFFFA3;
+}
+
+.album-info .color-blue {
+    color: #694EFF;
 }
 
 .album img {
@@ -200,6 +328,23 @@ main {
 #track-list li span.track-length {
     color: #694EFF; /* Match track length color to track number */
     margin-left: auto; /* Push the track length to the far right */
+}
+
+/* Featured/Clickable Track Style */
+.featured-track {
+    cursor: pointer;
+    color: #694EFF; /* Blue accent */
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
+.featured-track:hover {
+    color: #fff; /* White on hover */
+    background-color: rgba(255, 255, 255, 0.05); /* Subtle background to indicate interactivity */
+}
+.featured-track:hover span.track-number,
+.featured-track:hover span.track-length {
+    color: #fff; /* Also whiten the numbers on hover */
 }
 
 .album-credits {
@@ -405,6 +550,7 @@ footer {
     padding: 1rem;
     width: 100%; /* Ensure the footer spans the full width */
     z-index: 1000; /* Ensure it stays above other elements */
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
 }
 
 footer a {
@@ -439,6 +585,10 @@ footer a:hover {
     color: #694EFF;
 }
 
+.footer-email.hidden {
+    display: none;
+}
+
 @media (max-width: 768px) {
     header, main {
         width: 100%; /* Maximize width on mobile */
@@ -447,14 +597,30 @@ footer a:hover {
         box-sizing: border-box; /* Ensure padding doesn't cause overflow */
     }
 
-    main {
-        padding-top: 1rem;
-        padding-bottom: 80px; /* Ensure space for fixed footer */
-    }
-
     header {
         padding-top: 15px;
         padding-bottom: 15px;
+        flex-wrap: wrap; /* Allow items to wrap */
+        gap: 1rem;
+    }
+
+    #logo-link {
+        order: 1; /* Keep logo first */
+    }
+
+    nav {
+        order: 2; /* Move nav to the right of logo */
+    }
+
+    #search-container {
+        margin: 0;
+        width: 100%;
+        order: 3; /* Move search bar to the bottom */
+    }
+
+    main {
+        padding-top: 1rem;
+        padding-bottom: 120px; /* Increase to ensure space for footer controls */
     }
 
     #album-details {
@@ -501,25 +667,28 @@ footer a:hover {
     }
 }
 
-.color-red {
-    color: #FF383F;
-}
-
-.color-green {
-    color: #FFFFA3;
-}
-
-.color-blue {
-    color: #694EFF;
-}
-
 /* Expanded Album Art View */
+@keyframes fadeInExpanded {
+    from { 
+        opacity: 0; 
+        transform: translateY(5px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
 #album-details.expanded-view {
+    animation: fadeInExpanded 0.2s ease-out forwards;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: auto;
-    max-height: calc(100vh - 180px); /* leave room for header + fixed footer */
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+    flex: 1;
+    max-height: none; /* Remove calculated constraint */
     overflow: visible; /* Allow 3D transforms to extend outside */
 }
 
@@ -538,10 +707,98 @@ footer a:hover {
     perspective: 1000px; /* Enable 3D space */
 }
 
+#audio-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center content */
+    gap: 15px;
+    padding: 0; /* Remove padding */
+    width: 100%; /* Take up full footer width */
+}
+
+#audio-controls.hidden {
+    display: none;
+}
+
+#play-pause-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    transition: transform 0.2s ease;
+}
+
+#play-pause-btn:hover {
+    transform: scale(1.1);
+    color: #694EFF; 
+}
+
+#timeline-slider, #volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: #555;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+#timeline-slider {
+    width: 250px;
+}
+
+#volume-slider {
+    width: 80px;
+}
+
+#timeline-slider::-webkit-slider-thumb, #volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+#timeline-slider::-moz-range-thumb, #volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+#timeline-slider::-webkit-slider-thumb:hover, #volume-slider::-webkit-slider-thumb:hover {
+    background: #694EFF;
+}
+
+#timeline-slider::-moz-range-thumb:hover, #volume-slider::-moz-range-thumb:hover {
+    background: #694EFF;
+}
+
+#current-time, #total-time {
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    color: #FFFFA3;
+    min-width: 35px;
+    text-align: center;
+}
+
 #album-details.expanded-view img {
-    max-height: calc(100vh - 240px); /* fit within viewport without creating scrollbars */
-    max-width: min(900px, 92vw); /* keep large but cap it on desktop */
+    max-height: 100%; /* Fit within the container */
+    max-width: 100%; 
     width: auto; /* Maintain aspect ratio */
+    height: auto;
     object-fit: contain;
     cursor: pointer; /* click again to return */
     transition: transform 0.05s linear; /* Smooth, quick updates for 3D effect */
@@ -557,4 +814,41 @@ footer a:hover {
 #close-expanded-btn,
 #close-expanded-btn.hidden {
     display: none;
+}
+
+@media (max-width: 1024px) {
+    #album-details.expanded-view img {
+        max-width: 85%; /* Add space on sides for sway animation */
+        max-height: 70vh; /* Ensure controls are visible */
+    }
+
+    #audio-controls {
+        gap: 10px; /* Reduce gap on mobile/tablet */
+        padding: 0 5px; /* Add slight horizontal padding inside controls */
+        box-sizing: border-box;
+        flex-wrap: wrap; 
+    }
+
+    #now-playing {
+        width: 100%;
+        justify-content: center; /* Center flex items */
+        margin-right: 0;
+        margin-bottom: 5px;
+        max-width: none;
+    }
+
+    #timeline-slider {
+        width: auto; /* Override fixed width */
+        flex: 1; /* Let it fill available space */
+        min-width: 60px; /* Prevent it from disappearing */
+    }
+
+    #volume-slider {
+        width: 60px; /* Reduce volume slider size */
+    }
+
+    #current-time, #total-time {
+        font-size: 0.8rem;
+        min-width: 30px;
+    }
 }

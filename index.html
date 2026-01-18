@@ -36,6 +36,12 @@
         <a href="#" id="logo-link">
             <img src="./assets/MSR26forweb2.svg" alt="Mental Strain Records" id="logo" width="64" height="64">
         </a>
+        <div id="search-container">
+            <div class="search-wrapper">
+                <input type="text" id="search-bar" placeholder="Search artist or title...">
+                <button id="search-clear" class="hidden" aria-label="Clear search">&times;</button>
+            </div>
+        </div>
         <nav>
             <a href="#about" id="about-link">ABOUT</a>
         </nav>
@@ -49,6 +55,14 @@
         <a href="mailto:contact@mentalstrainrecords.com" class="footer-email">
             <span>contact@</span><span class="color-red">mental</span><span class="color-green">strain</span><span class="color-blue">records</span><span>.com</span>
         </a>
+        <div id="audio-controls" class="hidden">
+            <div id="now-playing" class="hidden"></div>
+            <button id="play-pause-btn" title="Pause">❚❚</button>
+            <span id="current-time">0:00</span>
+            <input type="range" id="timeline-slider" min="0" max="100" value="0" step="0.1" title="Seek">
+            <span id="total-time">0:00</span>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5" title="Volume">
+        </div>
     </footer>
     <script src="script.js" defer></script>
 </body>
