@@ -1,0 +1,21 @@
+{
+  "name": "msr-web",
+  "version": "1.0.0",
+  "description": "Mental Strain Records Website",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx http-server -p 8000",
+    "deploy": "wrangler pages deploy . --project-name=msr-web"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kaywebs/msr-web.git"
+  },
+  "keywords": [
+    "music",
+    "record-label",
+    "website"
+  ],
+  "author": "kaywebs",
+  "license": "MIT"
+}

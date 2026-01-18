@@ -1,0 +1,6 @@
+# Cloudflare Pages _redirects file
+# Simple redirect rules for Cloudflare Pages
+# Format: from to [status]
+
+# Example redirects (uncomment and modify as needed)
+# /old-path /new-path 301
