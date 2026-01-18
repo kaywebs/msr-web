@@ -1,0 +1,537 @@
+/* General Body Styles */
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0;
+    background-color: #000;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    min-height: 100vh; /* Ensure the body takes up the full height of the viewport */
+}
+
+/* Header Styles */
+header {
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 75%; /* Match the header width to the main content */
+    max-width: 1400px; /* Optional maximum width */
+    margin: 0 auto; /* Center the header */
+}
+
+header h1 {
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+header img {
+    width: 4em;
+    height: 4em;
+}
+
+#logo-link {
+    display: inline-block;
+}
+
+#logo {
+    transition: transform 0.2s ease; /* Smooth animation for scaling */
+}
+
+#logo:hover {
+    transform: scale(1.1); /* Grow the logo slightly on hover */
+}
+
+/* Nav Styles */
+nav a {
+    color: #FFFFA3;
+    text-decoration: none;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
+nav a:hover {
+    color: #694EFF; /* Blue accent color */
+}
+
+/* Main Content and Album Grid */
+main {
+    padding: 2rem;
+    position: relative;
+    min-height: 50vh;
+    width: 75%; /* Increase from 66.67% to 75% */
+    max-width: 1400px; /* Optional maximum width */
+    margin: 0 auto; /* Center the content */
+    flex: 1; /* Allow the main content to grow and push the footer to the bottom */
+}
+
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Increase image size */
+    gap: 0.5rem; /* Reduce space between entries */
+}
+
+.album {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    border: 1px solid transparent; /* Hidden border by default */
+    box-sizing: border-box; /* Include border in element's total width and height */
+    transition: border-color 0.2s ease; /* Smooth border color transition */
+}
+
+.album.color-red {
+    border-color: #FF383F;
+}
+
+.album.color-green {
+    border-color: #FFFFA3;
+}
+
+.album.color-blue {
+    border-color: #694EFF;
+}
+
+.album img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.album-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 1rem;
+    transform: translateY(100%);
+    text-align: center;
+    transition: transform 0.2s ease, color 0.2s ease; /* Transition transform for slide effect */
+}
+
+.album:hover .album-info {
+    transform: translateY(0);
+}
+
+.album-info h3, .album-info p {
+    margin: 0;
+}
+
+.album-info h3 {
+    font-size: 1.2rem;
+}
+
+.album-info p {
+    font-size: 1rem;
+    color: #aaa;
+}
+
+/* Album Details (In-Page) */
+#album-details {
+    display: flex;
+    gap: 2rem;
+    padding: 2rem;
+    opacity: 1;
+}
+
+.album-details-cover {
+    flex: 1;
+    max-width: 800px;
+}
+
+.album-details-cover img {
+    width: 100%;
+    height: auto;
+}
+
+.album-details-info {
+    flex: 2;
+}
+
+#album-details h2 {
+    margin-top: 0;
+    color: #FF383F;
+}
+
+#album-details h3 {
+    margin-top: 0;
+    color: #FF383F;
+}
+
+#album-details p {
+    margin-top: 0;
+    color: #FFFFA3;
+}
+
+#track-list {
+    list-style: none;
+    padding: 0;
+    color:#FFFFA3;
+}
+
+#track-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center; /* Ensure track name stays aligned with track number */
+    justify-content: flex-start; /* Align items to the start */
+}
+
+#track-list li:last-child {
+    border-bottom: none;
+}
+
+#track-list li span {
+    color: #888;
+}
+
+#track-list li span.track-number {
+    color: #694EFF; /* Different color for track number */
+    margin-right: 1rem; /* Optional spacing */
+    flex-shrink: 0; /* Prevent the track number from shrinking */
+}
+
+#track-list li span.track-length {
+    color: #694EFF; /* Match track length color to track number */
+    margin-left: auto; /* Push the track length to the far right */
+}
+
+.album-credits {
+    list-style: none;
+    padding: 0;
+    color:#FFFFA3
+}
+
+.album-credits li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+}
+
+.album-credits li:last-child {
+    border-bottom: none;
+}
+
+.album-credits li span {
+    color: #888;
+}
+
+.album-credits, .artist-links {
+    margin-bottom: 20px;
+}
+
+.artist-links {
+    display: flex;
+    justify-content: flex-start; /* Align buttons to the left */
+    gap: 1rem; /* Add spacing between buttons */
+    margin-top: 1rem;
+}
+
+.streaming-button img {
+    width: 50px; /* Set a uniform size for all buttons */
+    height: 50px;
+    object-fit: contain; /* Ensure the image fits within the bounds */
+    transition: transform 0.2s ease; /* Add hover effect */
+}
+
+.streaming-button img:hover {
+    transform: scale(1.1); /* Slightly enlarge on hover */
+}
+
+.artist-links a {
+    color: #694EFF;
+    text-decoration: none;
+    margin-right: 1rem;
+}
+
+.artist-links a:hover {
+    text-decoration: underline;
+}
+
+#back-button, #close-expanded-btn {
+    background: #694EFF;
+    border: 2px solid #694EFF; /* Add border to prevent layout shift on hover */
+    color: #000;
+    padding: 10px 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease; /* Fade transition */
+    font-weight: bold;
+}
+
+#back-button:hover, #close-expanded-btn:hover {
+    background: #000;
+    color: #694EFF;
+}
+
+#back-button {
+    margin-bottom: 20px;
+}
+
+/* Hidden class for SPA-like transitions */
+.hidden {
+    display: none;
+}
+
+/* Animation for page transitions */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(5px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.album-grid:not(.hidden), 
+#album-details:not(.hidden) {
+    animation: fadeIn 0.2s ease-out forwards; /* Apply fade-in effect when visible */
+}
+
+/* Ensure these are hidden correctly without layout shifts */
+.album-grid.hidden {
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    overflow: hidden;
+}
+
+#album-details {
+    opacity: 1;
+}
+
+#album-details.hidden {
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+}
+
+/* About Page Styles */
+#about-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+#about-page.hidden {
+    display: none;
+    opacity: 0;
+}
+
+#about-page h2 {
+    color: #FF383F; /* Red accent */
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#about-page h3 {
+    color: #FFFFA3; /* Green accent */
+    margin-top: 2rem;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+}
+
+#about-page h4 {
+    color: #694EFF; /* Blue accent */
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+#about-page p {
+    line-height: 1.6;
+    color: #FFFFA3;
+}
+
+#about-page .text-link {
+    color: #FFFFA3;
+    text-decoration: none;
+    font-weight: bold;
+    margin-right: 1.5rem;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+#about-page .text-link:hover {
+    border-color: #fff;
+}
+
+#about-page .artist-entry {
+    margin-bottom: 2rem;
+}
+
+#about-page .artist-image {
+    display: block;
+    max-width: 100%;
+    width: 400px; /* Medium size */
+    height: auto;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+/* Reusing animation for about page */
+#about-page:not(.hidden) {
+    animation: fadeIn 0.2s ease-out forwards;
+}
+
+#about-page .artist-entry {
+    margin-bottom: 2rem;
+}
+
+footer {
+    position: fixed; /* Ensure the footer is always fixed at the bottom */
+    bottom: 0;
+    left: 0;
+    background-color: #000; /* Match the header color */
+    color: #fff;
+    text-align: center;
+    padding: 1rem;
+    width: 100%; /* Ensure the footer spans the full width */
+    z-index: 1000; /* Ensure it stays above other elements */
+}
+
+footer a {
+    text-decoration: none;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Match the font style */
+    font-size: 1rem; /* Adjust font size */
+}
+
+footer a:hover {
+    text-decoration: underline; /* Underline on hover */
+}
+
+.footer-email {
+    color: #333;
+}
+
+/* Default footer email segment color */
+.footer-email span {
+    color: #333;
+}
+
+/* Ensure accent spans keep their intended colors */
+.footer-email span.color-red {
+    color: #FF383F;
+}
+
+.footer-email span.color-green {
+    color: #FFFFA3;
+}
+
+.footer-email span.color-blue {
+    color: #694EFF;
+}
+
+@media (max-width: 768px) {
+    #album-details {
+        flex-direction: column; /* Stack content vertically */
+        align-items: center; /* Center content horizontally */
+        text-align: center; /* Center text */
+    }
+
+    .album-details-cover {
+        max-width: 100%; /* Ensure the image fits the screen */
+        margin-bottom: 1rem; /* Add spacing below the image */
+    }
+
+    .album-details-info {
+        width: 100%; /* Make the info take full width */
+    }
+
+    #track-list li {
+        justify-content: center; /* Center track list items */
+    }
+
+    .album-credits li {
+        justify-content: space-between; /* Ensure credits align left and right */
+        text-align: left; /* Maintain left alignment for text */
+    }
+
+    .artist-links {
+        justify-content: center; /* Center buttons on mobile */
+    }
+
+    /* Disable hover effects on mobile */
+    .album-info {
+        display: none !important;
+    }
+
+    .album {
+        border-color: transparent !important;
+    }
+}
+
+.color-red {
+    color: #FF383F;
+}
+
+.color-green {
+    color: #FFFFA3;
+}
+
+.color-blue {
+    color: #694EFF;
+}
+
+/* Expanded Album Art View */
+#album-details.expanded-view {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 80vh; /* Take up most of the viewport */
+}
+
+#album-details.expanded-view .album-details-info {
+    display: none; /* Hide the info section */
+}
+
+#album-details.expanded-view .album-details-cover {
+    width: 100%;
+    height: 100%;
+    max-width: none; /* Remove max-width restriction */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    perspective: 1000px; /* Enable 3D space */
+}
+
+#album-details.expanded-view img {
+    max-height: 80vh; /* Limit height to viewport */
+    max-width: 90vw; /* Limit width to viewport to prevent horizontal scroll on mobile */
+    width: auto; /* Maintain aspect ratio */
+    object-fit: contain;
+    cursor: default; /* Reset cursor */
+    transition: transform 0.05s linear; /* Smooth, quick updates for 3D effect */
+    transform-style: preserve-3d;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); /* Enhance depth */
+}
+
+#album-cover-image {
+    cursor: pointer; /* Indicate clickability */
+}
+
+#close-expanded-btn {
+    margin-top: 20px; /* Space between image and button */
+}
+
+#close-expanded-btn.hidden {
+    display: none;
+}
