@@ -282,7 +282,93 @@ let swayFrame;
 let gridScrollPosition = 0;
 let currentAudio = null;
 
+// Combo game tracking
+let comboCount = 0;
+let lastComboColor = null;
+let audioContext = null;
+let comboGameEnabled = false;
+let highestCombo = 0;
+let comboStats = {}; // Track how many times each combo level was achieved
+
 const qs = (html) => html.trim();
+
+// Save game data to localStorage
+function saveGameData() {
+    try {
+        localStorage.setItem('msr-combo-stats', JSON.stringify(comboStats));
+        localStorage.setItem('msr-highest-combo', highestCombo.toString());
+    } catch (e) {
+        console.log('Failed to save game data:', e);
+    }
+}
+
+// Load game data from localStorage
+function loadGameData() {
+    try {
+        const savedStats = localStorage.getItem('msr-combo-stats');
+        const savedHighest = localStorage.getItem('msr-highest-combo');
+        
+        if (savedStats) {
+            comboStats = JSON.parse(savedStats);
+        }
+        if (savedHighest) {
+            highestCombo = parseInt(savedHighest, 10) || 0;
+        }
+    } catch (e) {
+        console.log('Failed to load game data:', e);
+    }
+}
+
+// Initialize audio context on first user interaction
+function initAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioContext;
+}
+
+async function enableComboGame() {
+    if (comboGameEnabled) return;
+    
+    const ctx = initAudioContext();
+    
+    // Resume context and play startup sound
+    try {
+        if (ctx.state === 'suspended') {
+            await ctx.resume();
+        }
+        
+        // Play startup chime
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        oscillator.frequency.value = 600;
+        oscillator.type = 'sine';
+        
+        const now = ctx.currentTime;
+        gainNode.gain.setValueAtTime(0.15, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        
+        oscillator.start(now);
+        oscillator.stop(now + 0.5);
+        
+        // Enable game
+        comboGameEnabled = true;
+        
+        // Load saved game data
+        loadGameData();
+        
+        // Initialize high score display
+        updateComboDisplay();
+        
+        console.log('Combo game enabled!');
+    } catch (e) {
+        console.log('Failed to enable audio:', e);
+    }
+}
 
 function resetExpandedAlbumView() {
     albumDetails.classList.remove("expanded-view");
@@ -308,6 +394,18 @@ function resetExpandedAlbumView() {
     clearTimeout(idleTimer);
     if (swayFrame) cancelAnimationFrame(swayFrame);
     swayFrame = null;
+}
+
+function shakeScreen(comboCount) {
+    const intensity = Math.min((comboCount - 5) * 2, 20); // Start at 2px for x6, cap at 20px
+    document.body.style.setProperty('--shake-intensity', `${intensity}px`);
+    document.body.classList.add('screen-shake');
+    
+    // Remove shake after animation
+    setTimeout(() => {
+        document.body.classList.remove('screen-shake');
+        document.body.style.removeProperty('--shake-intensity');
+    }, 500);
 }
 
 function formatTime(seconds) {
@@ -402,7 +500,7 @@ function renderAboutPage() {
 
     aboutPage.innerHTML = qs(`
         <h2>About Mental Strain Records</h2>
-        <p>Mental Strain Records is an independent record label based in Penticton, B.C., dedicated to releasing local music and supporting local artists. Home of kwebspost. Please get into contact with us via email for any inquiries.</p>
+        <p>Mental Strain Records is an independent record label based in Penticton, B.C., dedicated to releasing local music and supporting local artists. Home of kwebspost. Please get into contact with us via email for any inquiries. Hold down the website logo for a surprise!</p>
 
         <div class="about-section">
             <h3>Our Links</h3>
@@ -778,6 +876,147 @@ if (document.readyState === 'loading') {
     router();
 }
 
+function showComboPopup(count, color) {
+    if (!comboGameEnabled) return; // Don't show popups if game isn't active
+    
+    const popup = document.createElement('div');
+    popup.className = `combo-popup ${color}`;
+    popup.textContent = `×${count}`;
+    popup.style.left = `${Math.random() * 60 + 20}%`;
+    popup.style.top = `${Math.random() * 40 + 30}%`;
+    document.body.appendChild(popup);
+    
+    // Track combo achievement
+    comboStats[count] = (comboStats[count] || 0) + 1;
+    saveGameData();
+    
+    // Screen shake for high combos
+    if (count >= 6) {
+        shakeScreen(count);
+    }
+    
+    // Play special sound for 9x combo
+    if (count === 9) {
+        const holyShitAudio = new Audio('./assets/audio/holyshit.mp3');
+        holyShitAudio.volume = 1.0;
+        holyShitAudio.play().catch(e => console.log('Failed to play holy shit sound:', e));
+    }
+    
+    // Play special sound for 10x combo
+    if (count === 10) {
+        const godlikeAudio = new Audio('./assets/audio/godlike.mp3');
+        godlikeAudio.volume = 1.0;
+        godlikeAudio.play().catch(e => console.log('Failed to play godlike sound:', e));
+    }
+    
+    // Play subtle sound effect only if game is enabled
+    if (comboGameEnabled) {
+        setTimeout(async () => {
+            try {
+                const ctx = audioContext;
+                if (!ctx) return;
+                
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                oscillator.frequency.value = 400 + (count * 100);
+                oscillator.type = 'sine';
+                
+                const now = ctx.currentTime;
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                
+                oscillator.start(now);
+                oscillator.stop(now + 0.3);
+            } catch (e) {
+                console.log('Audio error:', e);
+            }
+        }, 0);
+    }
+    
+    // Remove popup after animation
+    setTimeout(() => popup.remove(), 1000);
+}
+
+function updateComboDisplay() {
+    const comboDisplay = document.getElementById('combo-display');
+    const highScoreDisplay = document.getElementById('high-score-display');
+    if (!comboDisplay) return;
+    
+    // Update high score
+    if (comboCount > highestCombo) {
+        highestCombo = comboCount;
+        saveGameData();
+    }
+    
+    // Show/hide combo counter
+    if (comboGameEnabled && comboCount >= 2) {
+        comboDisplay.textContent = `Combo: ×${comboCount}`;
+        comboDisplay.className = `combo-counter ${lastComboColor}`;
+    } else {
+        comboDisplay.className = 'hidden';
+    }
+    
+    // Always show high score when game is active
+    if (comboGameEnabled && highScoreDisplay) {
+        highScoreDisplay.textContent = `Best: ×${highestCombo}`;
+        highScoreDisplay.className = 'high-score-counter';
+    }
+}
+
+function showComboStats() {
+    const modal = document.createElement('div');
+    modal.id = 'combo-stats-modal';
+    modal.className = 'modal-overlay';
+    
+    const maxCount = Math.max(...Object.values(comboStats), 1);
+    const sortedCombos = Object.keys(comboStats).map(Number).sort((a, b) => a - b);
+    
+    const statsHTML = sortedCombos.length > 0 
+        ? sortedCombos.map(combo => {
+            const count = comboStats[combo];
+            const percentage = (count / maxCount) * 100;
+            return `
+                <div class="stat-row">
+                    <div class="stat-label">×${combo}</div>
+                    <div class="stat-bar-container">
+                        <div class="stat-bar" style="width: ${percentage}%"></div>
+                    </div>
+                    <div class="stat-count">${count}</div>
+                </div>
+            `;
+        }).join('')
+        : '<p style="text-align: center; color: #888;">No combos achieved yet!</p>';
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <button class="modal-close" id="close-stats-modal">&times;</button>
+            <h2>Combo Statistics</h2>
+            <div class="stats-container">
+                ${statsHTML}
+            </div>
+            <div class="stats-summary">
+                <p><strong>Total Combos:</strong> ${Object.values(comboStats).reduce((a, b) => a + b, 0)}</p>
+                <p><strong>Highest:</strong> ×${highestCombo}</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal handlers
+    const closeBtn = document.getElementById('close-stats-modal');
+    const closeModal = () => modal.remove();
+    
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+}
+
 albumList.addEventListener("mouseover", (e) => {
     if (window.innerWidth <= 768) return;
 
@@ -796,9 +1035,16 @@ albumList.addEventListener("mouseover", (e) => {
     const colors = ["color-red", "color-green", "color-blue"];
 
     let randomClass;
-    do {
+    
+    if (comboGameEnabled) {
+        // When game is active: true 1/3 odds, can repeat colors
         randomClass = colors[Math.floor(Math.random() * colors.length)];
-    } while (randomClass === lastColor);
+    } else {
+        // When game is not active: prevent same color twice in a row
+        do {
+            randomClass = colors[Math.floor(Math.random() * colors.length)];
+        } while (randomClass === lastColor);
+    }
 
     albumInfo.dataset.lastColor = randomClass;
 
@@ -809,13 +1055,34 @@ albumList.addEventListener("mouseover", (e) => {
 
     album.classList.remove("color-red", "color-green", "color-blue");
     album.classList.add(randomClass);
+
+    // Only run combo game logic if game is enabled
+    if (!comboGameEnabled) return;
+
+    // Add game-active class when game is enabled
+    album.classList.add("game-active");
+
+    // Combo game logic
+    if (lastComboColor === randomClass) {
+        comboCount++;
+        if (comboCount >= 3) {
+            showComboPopup(comboCount, randomClass);
+        }
+    } else {
+        comboCount = 1;
+        lastComboColor = randomClass;
+    }
+    updateComboDisplay();
 });
 
 albumList.addEventListener("mouseout", (e) => {
     const album = e.target.closest(".album");
     if (!album || (e.relatedTarget && album.contains(e.relatedTarget))) return;
 
-    album.classList.remove("color-red", "color-green", "color-blue");
+    // Only remove border if game is not active
+    if (!comboGameEnabled) {
+        album.classList.remove("color-red", "color-green", "color-blue");
+    }
 
     album._colorTimeout = setTimeout(() => {
         const albumInfo = album.querySelector(".album-info");
@@ -904,4 +1171,67 @@ if ('serviceWorker' in navigator) {
                 console.log('Service Worker registration failed:', error);
             });
     });
+}
+
+// Combo game enable via logo long-press
+const logo = document.getElementById('logo');
+let holdTimer = null;
+let holdStartTime = 0;
+let shakeInterval = null;
+
+if (logo) {
+    const startHold = (e) => {
+        if (comboGameEnabled) return;
+        e.preventDefault();
+        
+        holdStartTime = Date.now();
+        logo.style.cursor = 'pointer';
+        
+        // Gradually increase shake
+        shakeInterval = setInterval(() => {
+            const elapsed = Date.now() - holdStartTime;
+            const progress = Math.min(elapsed / 3000, 1);
+            const shakeIntensity = progress * 10;
+            logo.style.setProperty('--shake-intensity', `${shakeIntensity}px`);
+            logo.classList.add('shaking');
+        }, 50);
+        
+        // Enable game after 3 seconds
+        holdTimer = setTimeout(() => {
+            enableComboGame();
+            stopHold();
+        }, 3000);
+    };
+    
+    const stopHold = () => {
+        if (holdTimer) {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+        }
+        if (shakeInterval) {
+            clearInterval(shakeInterval);
+            shakeInterval = null;
+        }
+        logo.classList.remove('shaking');
+        logo.style.removeProperty('--shake-intensity');
+    };
+    
+    logo.addEventListener('mousedown', startHold);
+    logo.addEventListener('mouseup', stopHold);
+    logo.addEventListener('mouseleave', stopHold);
+    logo.addEventListener('touchstart', startHold);
+    logo.addEventListener('touchend', stopHold);
+    logo.addEventListener('touchcancel', stopHold);
+}
+
+// High score stats click handler
+const highScoreDisplay = document.getElementById('high-score-display');
+if (highScoreDisplay) {
+    highScoreDisplay.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (comboGameEnabled) {
+            showComboStats();
+        }
+    });
+    highScoreDisplay.style.cursor = 'pointer';
 }
