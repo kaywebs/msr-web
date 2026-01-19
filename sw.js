@@ -1,11 +1,14 @@
 // Service Worker for Mental Strain Records
-const CACHE_NAME = 'msr-cache-v1';
+const CACHE_NAME = 'msr-cache-v2';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
     '/style.css',
     '/script.js',
     '/assets/MSR26forweb2.svg',
+    '/assets/apple-touch-icon.png',
+    '/assets/favicon-32x32.png',
+    '/assets/favicon-16x16.png',
     '/assets/oat2.jpg',
     '/assets/post-kwebs.jpg',
     '/assets/wayne-street.jpg',
@@ -47,6 +50,14 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+    
+    // Skip caching for audio files - let them stream normally
+    if (url.pathname.includes('/assets/audio/') || 
+        event.request.destination === 'audio') {
+        return; // Don't intercept, let browser handle naturally
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
@@ -56,15 +67,16 @@ self.addEventListener('fetch', (event) => {
                 }
                 
                 return fetch(event.request).then((response) => {
-                    // Don't cache non-successful responses
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
+                    // Don't cache non-GET requests or non-successful responses
+                    if (!response || response.status !== 200 || response.type === 'error' ||
+                        event.request.method !== 'GET') {
                         return response;
                     }
                     
                     // Clone the response
                     const responseToCache = response.clone();
                     
-                    // Cache dynamically fetched resources (like audio files)
+                    // Cache dynamically fetched resources (excluding audio)
                     caches.open(CACHE_NAME)
                         .then((cache) => {
                             cache.put(event.request, responseToCache);
