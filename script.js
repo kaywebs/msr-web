@@ -691,15 +691,19 @@ function renderAlbumDetails(slug) {
                 }
             };
 
-            volumeSlider.oninput = (e) => {
+            // Volume slider handler with mobile touch support
+            const handleVolumeChange = (e) => {
                 e.stopPropagation();
                 if (currentAudio) {
-                    const val = e.target.value;
+                    const val = parseFloat(e.target.value);
                     currentAudio.volume = val * val;
                     updateTimelineStyle(volumeSlider, val, 1);
                 }
             };
-            
+
+            volumeSlider.oninput = handleVolumeChange;
+            volumeSlider.onchange = handleVolumeChange; // Ensure change fires on mobile
+            volumeSlider.ontouchend = handleVolumeChange; // Extra handler for touch devices
             volumeSlider.onclick = (e) => e.stopPropagation(); // Prevent bubbling
 
             currentAudio.play().catch(e => {
