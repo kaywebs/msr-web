@@ -72,7 +72,7 @@ header img {
 /* Combo Counter (Easter Egg) */
 #combo-display {
     position: absolute;
-    left: 7.5rem;
+    right: 9rem;
     top: 50%;
     transform: translateY(-50%);
     font-size: 0.9rem;
@@ -83,12 +83,14 @@ header img {
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.7);
     border: 2px solid;
-    transition: all 0.3s ease;
+    transition: opacity 5s ease, color 5s ease, border-color 5s ease;
     animation: pulse 0.5s ease-in-out;
+    opacity: 1;
 }
 
 #combo-display.hidden {
-    display: none;
+    opacity: 0;
+    pointer-events: none;
 }
 
 #combo-display.color-red {
@@ -109,7 +111,7 @@ header img {
 /* High Score Counter */
 #high-score-display {
     position: absolute;
-    left: 17rem;
+    left: 7.5rem;
     top: 50%;
     transform: translateY(-50%);
     font-size: 0.8rem;
@@ -151,9 +153,9 @@ header img {
 }
 
 .modal-content {
-    background: #111;
+    background: #000000;
     border: 2px solid #694EFF;
-    border-radius: 8px;
+    border-radius: 0;
     padding: 2rem;
     max-width: 500px;
     width: 90%;
@@ -218,7 +220,7 @@ header img {
 
 .stat-bar {
     height: 100%;
-    background: linear-gradient(90deg, #694EFF, #FF383F);
+    background: #694EFF;
     transition: width 0.5s ease;
     border-radius: 3px;
 }
@@ -239,6 +241,54 @@ header img {
 
 .stats-summary p {
     margin: 0.5rem 0;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.share-stats-btn {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: #000;
+    border: 2px solid #694EFF;
+    border-radius: 0;
+    color: #694EFF;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.share-stats-btn:hover {
+    background: rgba(105, 78, 255, 0.1);
+}
+
+.share-stats-btn:active {
+    background: rgba(105, 78, 255, 0.2);
+}
+
+.reset-stats-btn {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: #000;
+    border: 2px solid #FF383F;
+    border-radius: 0;
+    color: #FF383F;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reset-stats-btn:hover {
+    background: rgba(255, 56, 63, 0.1);
+}
+
+.reset-stats-btn:active {
+    background: rgba(255, 56, 63, 0.2);
 }
 
 @keyframes pulse {
@@ -457,6 +507,19 @@ main {
 
 .album.game-active {
     border-width: 3px; /* Larger border when game is active */
+}
+
+.album.game-active:hover {
+    animation: impact 0.1s ease-out;
+}
+
+@keyframes impact {
+    0% {
+        transform: scale(var(--impact-scale, 1.05));
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 .album.color-red {
