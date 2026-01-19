@@ -1,0 +1,10 @@
+# robots.txt for Mental Strain Records
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://mentalstrainrecords.com/sitemap.xml
+
+# Disallow search results and filtered views
+Disallow: /*?search=*

@@ -10,6 +10,7 @@ body {
     height: 100vh; /* Lock body height to viewport */
     height: 100dvh; /* Use dynamic viewport unit for mobile */
     overflow: hidden; /* Prevent body scroll */
+    contain: layout style;
 }
 
 /* Header Styles */
@@ -41,6 +42,7 @@ header img {
 
 #logo {
     transition: transform 0.2s ease; /* Smooth animation for scaling */
+    will-change: transform;
 }
 
 #logo:hover {
@@ -199,6 +201,7 @@ main {
     border: 1px solid transparent; /* Hidden border by default */
     box-sizing: border-box; /* Include border in element's total width and height */
     transition: border-color 0.2s ease; /* Smooth border color transition */
+    contain: layout style paint;
 }
 
 .album.color-red {
@@ -241,6 +244,8 @@ main {
     transform: translateY(100%);
     text-align: center;
     transition: transform 0.2s ease, color 0.2s ease; /* Transition transform for slide effect */
+    will-change: transform;
+    contain: layout style;
 }
 
 .album:hover .album-info {
@@ -441,6 +446,7 @@ main {
 .album-grid:not(.hidden), 
 #album-details:not(.hidden) {
     animation: fadeIn 0.2s ease-out forwards; /* Apply fade-in effect when visible */
+    will-change: opacity, transform;
 }
 
 /* Ensure these are hidden correctly without layout shifts */
@@ -732,6 +738,7 @@ footer a:hover {
     align-items: center;
     padding: 0;
     transition: transform 0.2s ease;
+    will-change: transform;
 }
 
 #play-pause-btn:hover {
@@ -804,6 +811,7 @@ footer a:hover {
     transition: transform 0.05s linear; /* Smooth, quick updates for 3D effect */
     transform-style: preserve-3d;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5); /* Enhance depth */
+    will-change: transform;
 }
 
 #album-cover-image {

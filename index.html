@@ -7,6 +7,10 @@
     <meta name="description" content="Mental Strain Records - The home of kwebspost. Listen to albums like Of All Time Vol.2, Wayne Street, and more!">
     <meta name="keywords" content="Mental Strain Records, kwebspost, music, indie label, Tyler Witkowski, albums, streaming, kwebi, british columbia, penticton, bc,">
     <meta name="author" content="Tyler Witkowski">
+    <meta name="theme-color" content="#000000">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://mentalstrainrecords.com/">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -22,10 +26,37 @@
     <meta property="twitter:description" content="The home of kwebspost and local music releases.">
     <meta property="twitter:image" content="https://mentalstrainrecords.com/assets/MSR26forweb2.svg">
 
+    <!-- DNS Prefetch and Preconnect for external resources -->
+    <link rel="dns-prefetch" href="https://upload.wikimedia.org">
+    <link rel="preconnect" href="https://upload.wikimedia.org" crossorigin>
+
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="manifest" href="/assets/site.webmanifest">
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Mental Strain Records",
+      "url": "https://mentalstrainrecords.com",
+      "logo": "https://mentalstrainrecords.com/assets/MSR26forweb2.svg",
+      "description": "Independent record label based in Penticton, B.C., home of kwebspost",
+      "email": "contact@mentalstrainrecords.com",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Penticton",
+        "addressRegion": "BC",
+        "addressCountry": "CA"
+      },
+      "sameAs": [
+        "https://www.youtube.com/@mentalstrainrecords",
+        "https://mentalstrainrecords.bandcamp.com/"
+      ]
+    }
+    </script>
 
     <link rel="preload" href="./assets/MSR26forweb2.svg" as="image">
 
@@ -34,7 +65,7 @@
 <body>
     <header>
         <a href="#" id="logo-link">
-            <img src="./assets/MSR26forweb2.svg" alt="Mental Strain Records" id="logo" width="64" height="64">
+            <img src="./assets/MSR26forweb2.svg" alt="Mental Strain Records" id="logo" width="64" height="64" fetchpriority="high" decoding="async">
         </a>
         <div id="search-container">
             <div class="search-wrapper">

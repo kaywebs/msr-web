@@ -1,3 +1,16 @@
+// Utility: Debounce function for performance
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 const albums = [
     {
         id: 1,
@@ -261,6 +274,8 @@ const searchBar = document.getElementById("search-bar");
 const searchClearBtn = document.getElementById("search-clear");
 const nowPlayingEl = document.getElementById("now-playing");
 const mainElement = document.querySelector("main");
+const audioControls = document.getElementById("audio-controls");
+const footerEmail = document.querySelector(".footer-email");
 
 let idleTimer;
 let swayFrame;
@@ -274,9 +289,6 @@ function resetExpandedAlbumView() {
 
     const closeExpandedBtn = document.getElementById("close-expanded-btn");
     closeExpandedBtn?.classList.add("hidden");
-
-    const audioControls = document.getElementById("audio-controls");
-    const footerEmail = document.querySelector(".footer-email");
 
     audioControls?.classList.add("hidden");
     footerEmail?.classList.remove("hidden"); // Show email when audio controls hide
@@ -353,7 +365,7 @@ function renderAlbumGrid() {
                 .map((a) =>
                     qs(`
       <div class="album" data-slug="${a.slug}">
-        <img src="${a.cover}" alt="${a.title}">
+        <img src="${a.cover}" alt="${a.title}" loading="lazy" decoding="async">
         <div class="album-info">
           <h3>${a.title}</h3>
           <p>${a.artist}</p>
@@ -413,7 +425,7 @@ function renderAboutPage() {
                 <h4>kwebspost</h4>
                 <p>Experimental rock, based in Penticton, B.C.</p>
 
-                <img src="./assets/kwebspostimg.jpg" alt="kwebspost" class="artist-image">
+                <img src="./assets/kwebspostimg.jpg" alt="kwebspost" class="artist-image" loading="lazy" decoding="async">
 
                 <div class="artist-links">
                      <a href="https://open.spotify.com/artist/3AfA9MhbMBjEqjgMXAEDjp?si=Nkv010lFQyiD4BI13Gzq-A" target="_blank" rel="noopener" class="streaming-button">
@@ -462,7 +474,7 @@ function renderAlbumDetails(slug) {
 
     albumDetails.innerHTML = qs(`
     <div class="album-details-cover">
-      <img src="${album.cover}" alt="${album.title}" id="album-cover-image" title="Click to expand">
+      <img src="${album.cover}" alt="${album.title}" id="album-cover-image" title="Click to expand" loading="eager" decoding="async">
       <button id="close-expanded-btn" class="hidden">&larr; Back to Details</button>
     </div>
     <div class="album-details-info">
@@ -482,7 +494,7 @@ function renderAlbumDetails(slug) {
                         "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Bandcamp-button-circle-aqua.svg/512px-Bandcamp-button-circle-aqua.svg.png"
                 };
                 return `<a href="${url}" target="_blank" rel="noopener" class="streaming-button">
-              <img src="${logoUrls[name]}" alt="${name}">
+              <img src="${logoUrls[name]}" alt="${name}" loading="lazy" decoding="async">
             </a>`;
             })
             .join("")}
@@ -535,9 +547,6 @@ function renderAlbumDetails(slug) {
             albumDetails.classList.add("expanded-view");
             closeExpandedBtn.classList.remove("hidden");
             
-            const audioControls = document.getElementById("audio-controls");
-            const footerEmail = document.querySelector(".footer-email");
-
             audioControls.classList.remove("hidden");
             footerEmail.classList.add("hidden"); // Hide email when audio controls show
 
@@ -729,14 +738,14 @@ albumList.addEventListener("click", (e) => {
     if (album) location.hash = album.dataset.slug;
 });
 
-searchBar.addEventListener("input", () => {
+searchBar.addEventListener("input", debounce(() => {
     if (searchBar.value.trim().length > 0) {
         searchClearBtn.classList.remove("hidden");
     } else {
         searchClearBtn.classList.add("hidden");
     }
     renderAlbumGrid();
-});
+}, 200));
 
 searchClearBtn.addEventListener("click", () => {
     searchBar.value = "";
@@ -756,7 +765,14 @@ document.getElementById("logo-link").addEventListener("click", () => {
 });
 
 window.addEventListener("hashchange", router);
-document.addEventListener("DOMContentLoaded", router);
+
+// Handle both async and defer script loading
+if (document.readyState === 'loading') {
+    document.addEventListener("DOMContentLoaded", router);
+} else {
+    // DOM is already loaded, call router immediately
+    router();
+}
 
 albumList.addEventListener("mouseover", (e) => {
     if (window.innerWidth <= 768) return;
@@ -873,3 +889,15 @@ function updateTimelineStyle(slider, value, max) {
     slider.style.background = `linear-gradient(to right, #694EFF ${percentage}%, #555 ${percentage}%)`;
 }
 
+// Register Service Worker for offline support and caching
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('Service Worker registered:', registration.scope);
+            })
+            .catch(error => {
+                console.log('Service Worker registration failed:', error);
+            });
+    });
+}
