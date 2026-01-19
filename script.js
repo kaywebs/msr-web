@@ -905,10 +905,6 @@ function showComboPopup(count, color) {
     popup.style.top = `${Math.random() * 40 + 30}%`;
     document.body.appendChild(popup);
     
-    // Track combo achievement
-    comboStats[count] = (comboStats[count] || 0) + 1;
-    saveGameData();
-    
     // Screen shake for high combos
     if (count >= 6) {
         shakeScreen(count);
@@ -1216,6 +1212,11 @@ albumList.addEventListener("mouseover", (e) => {
             showComboPopup(comboCount, randomClass);
         }
     } else {
+        // Track the final combo that was achieved before breaking
+        if (comboCount >= 2) {
+            comboStats[comboCount] = (comboStats[comboCount] || 0) + 1;
+            saveGameData();
+        }
         comboCount = 1;
         lastComboColor = randomClass;
     }
