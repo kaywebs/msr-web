@@ -282,112 +282,7 @@ let swayFrame;
 let gridScrollPosition = 0;
 let currentAudio = null;
 
-// Combo game tracking
-let comboCount = 0;
-let lastComboColor = null;
-let audioContext = null;
-let comboGameEnabled = false;
-let highestCombo = 0;
-let comboStats = {}; // Track how many times each combo level was achieved
-let devMode = false; // Dev mode for testing combos
-
 const qs = (html) => html.trim();
-
-// Dev mode toggle (accessible from console)
-window.toggleDevMode = function() {
-    devMode = !devMode;
-    console.log(`%cDev Mode ${devMode ? 'ENABLED' : 'DISABLED'}`, `color: ${devMode ? '#00ff00' : '#ff0000'}; font-weight: bold; font-size: 16px;`);
-    if (devMode) {
-        console.log('%cAny color will now count towards combo!', 'color: #ffff00; font-style: italic;');
-    }
-    
-    // Show visual indicator
-    const comboDisplay = document.getElementById('combo-display');
-    if (comboDisplay && devMode) {
-        comboDisplay.style.outline = '2px solid lime';
-    } else if (comboDisplay) {
-        comboDisplay.style.outline = '';
-    }
-    return devMode;
-};
-
-// Save game data to localStorage
-function saveGameData() {
-    try {
-        localStorage.setItem('msr-combo-stats', JSON.stringify(comboStats));
-        localStorage.setItem('msr-highest-combo', highestCombo.toString());
-    } catch (e) {
-        console.log('Failed to save game data:', e);
-    }
-}
-
-// Load game data from localStorage
-function loadGameData() {
-    try {
-        const savedStats = localStorage.getItem('msr-combo-stats');
-        const savedHighest = localStorage.getItem('msr-highest-combo');
-        
-        if (savedStats) {
-            comboStats = JSON.parse(savedStats);
-        }
-        if (savedHighest) {
-            highestCombo = parseInt(savedHighest, 10) || 0;
-        }
-    } catch (e) {
-        console.log('Failed to load game data:', e);
-    }
-}
-
-// Initialize audio context on first user interaction
-function initAudioContext() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    return audioContext;
-}
-
-async function enableComboGame() {
-    if (comboGameEnabled) return;
-    
-    const ctx = initAudioContext();
-    
-    // Resume context and play startup sound
-    try {
-        if (ctx.state === 'suspended') {
-            await ctx.resume();
-        }
-        
-        // Play startup chime
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        
-        oscillator.frequency.value = 600;
-        oscillator.type = 'sine';
-        
-        const now = ctx.currentTime;
-        gainNode.gain.setValueAtTime(0.15, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-        
-        oscillator.start(now);
-        oscillator.stop(now + 0.5);
-        
-        // Enable game
-        comboGameEnabled = true;
-        
-        // Load saved game data
-        loadGameData();
-        
-        // Initialize high score display
-        updateComboDisplay();
-        
-        console.log('Combo game enabled!');
-    } catch (e) {
-        console.log('Failed to enable audio:', e);
-    }
-}
 
 function resetExpandedAlbumView() {
     albumDetails.classList.remove("expanded-view");
@@ -396,7 +291,16 @@ function resetExpandedAlbumView() {
     closeExpandedBtn?.classList.add("hidden");
 
     audioControls?.classList.add("hidden");
-    footerEmail?.classList.remove("hidden"); // Show email when audio controls hide
+    
+    // Show game UI or email depending on game state
+    const gameFooterUI = document.getElementById("game-footer-ui");
+    if (window.ColourComboGame?.isEnabled()) {
+        gameFooterUI?.classList.remove("hidden");
+        footerEmail?.classList.add("hidden");
+    } else {
+        footerEmail?.classList.remove("hidden"); // Show email when audio controls hide
+    }
+    
     nowPlayingEl.classList.add("hidden"); // Hide playing song when closing expanded view
 
     const img = document.getElementById("album-cover-image");
@@ -413,18 +317,6 @@ function resetExpandedAlbumView() {
     clearTimeout(idleTimer);
     if (swayFrame) cancelAnimationFrame(swayFrame);
     swayFrame = null;
-}
-
-function shakeScreen(comboCount) {
-    const intensity = Math.min((comboCount - 5) * 2, 20); // Start at 2px for x6, cap at 20px
-    document.body.style.setProperty('--shake-intensity', `${intensity}px`);
-    document.body.classList.add('screen-shake');
-    
-    // Remove shake after animation
-    setTimeout(() => {
-        document.body.classList.remove('screen-shake');
-        document.body.style.removeProperty('--shake-intensity');
-    }, 500);
 }
 
 function formatTime(seconds) {
@@ -666,6 +558,10 @@ function renderAlbumDetails(slug) {
             
             audioControls.classList.remove("hidden");
             footerEmail.classList.add("hidden"); // Hide email when audio controls show
+            
+            // Hide game UI when audio controls show
+            const gameFooterUI = document.getElementById("game-footer-ui");
+            gameFooterUI?.classList.add("hidden");
 
             if (album.playingSong) {
                 // Separate the label and the song title into different elements
@@ -895,271 +791,6 @@ if (document.readyState === 'loading') {
     router();
 }
 
-function showComboPopup(count, color) {
-    if (!comboGameEnabled) return; // Don't show popups if game isn't active
-    
-    const popup = document.createElement('div');
-    popup.className = `combo-popup ${color}`;
-    popup.textContent = `×${count}`;
-    popup.style.left = `${Math.random() * 60 + 20}%`;
-    popup.style.top = `${Math.random() * 40 + 30}%`;
-    document.body.appendChild(popup);
-    
-    // Screen shake for high combos
-    if (count >= 6) {
-        shakeScreen(count);
-    }
-    
-    // Play special sound for 9x combo
-    if (count === 9) {
-        const holyShitAudio = new Audio('./assets/audio/holyshit.mp3');
-        holyShitAudio.volume = 1.0;
-        holyShitAudio.play().catch(e => console.log('Failed to play holy shit sound:', e));
-    }
-    
-    // Play special sound for 10x+ combos
-    if (count >= 10) {
-        const godlikeAudio = new Audio('./assets/audio/godlike.mp3');
-        godlikeAudio.volume = 1.0;
-        godlikeAudio.play().catch(e => console.log('Failed to play godlike sound:', e));
-    }
-    
-    // Play subtle sound effect only if game is enabled
-    if (comboGameEnabled) {
-        setTimeout(async () => {
-            try {
-                const ctx = audioContext;
-                if (!ctx) return;
-                
-                const oscillator = ctx.createOscillator();
-                const gainNode = ctx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(ctx.destination);
-                
-                oscillator.frequency.value = 400 + (count * 100);
-                oscillator.type = 'sine';
-                
-                const now = ctx.currentTime;
-                gainNode.gain.setValueAtTime(0.1, now);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                
-                oscillator.start(now);
-                oscillator.stop(now + 0.3);
-            } catch (e) {
-                console.log('Audio error:', e);
-            }
-        }, 0);
-    }
-    
-    // Remove popup after animation
-    setTimeout(() => popup.remove(), 1000);
-}
-
-function updateComboDisplay() {
-    const comboDisplay = document.getElementById('combo-display');
-    const highScoreDisplay = document.getElementById('high-score-display');
-    if (!comboDisplay) return;
-    
-    // Update high score
-    if (comboCount > highestCombo) {
-        highestCombo = comboCount;
-        saveGameData();
-    }
-    
-    // Update impact scale based on combo (starts at 2x)
-    if (comboGameEnabled) {
-        const impactScale = 1.02 + (Math.max(0, comboCount - 2) * 0.015); // 1.02 at 2x, increases 0.015 per level
-        document.body.style.setProperty('--impact-scale', impactScale);
-    }
-    
-    // Show/hide combo counter
-    if (comboGameEnabled && comboCount >= 2) {
-        comboDisplay.textContent = `Combo: ×${comboCount}`;
-        comboDisplay.className = `combo-counter ${lastComboColor}`;
-        comboDisplay.style.opacity = '1';
-    } else {
-        comboDisplay.className = 'hidden';
-        comboDisplay.style.opacity = '0';
-    }
-    
-    // Always show high score when game is active
-    if (comboGameEnabled && highScoreDisplay) {
-        highScoreDisplay.textContent = `Best: ×${highestCombo}`;
-        highScoreDisplay.className = 'high-score-counter';
-    }
-}
-
-function exportStatsImage() {
-    // Create canvas
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 800;
-    canvas.height = 600;
-    
-    // Solid black background
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Border
-    ctx.strokeStyle = '#694EFF';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-    
-    // Title
-    ctx.fillStyle = '#694EFF';
-    ctx.font = 'bold 36px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Combo Stats', canvas.width / 2, 60);
-    
-    // Highest combo
-    ctx.fillStyle = '#FF383F';
-    ctx.font = 'bold 48px Arial';
-    ctx.fillText(`Highest Combo: ×${highestCombo}`, canvas.width / 2, 120);
-    
-    // Total combos
-    const totalCombos = Object.values(comboStats).reduce((a, b) => a + b, 0);
-    ctx.fillStyle = '#FFFFA3';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText(`Total Combos: ${totalCombos}`, canvas.width / 2, 155);
-    
-    // Get top 5 rarest combos (lowest count)
-    const sortedByCount = Object.entries(comboStats)
-        .sort((a, b) => a[1] - b[1])
-        .slice(0, 5);
-    
-    if (sortedByCount.length > 0) {
-        ctx.fillStyle = '#FFFFA3';
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText('Top 5 Rarest Combos Achieved:', canvas.width / 2, 195);
-        
-        const maxCount = Math.max(...sortedByCount.map(([_, count]) => count));
-        const startY = 235;
-        const barHeight = 40;
-        const barSpacing = 60;
-        const maxBarWidth = 500;
-        
-        sortedByCount.forEach(([combo, count], index) => {
-            const y = startY + (index * barSpacing);
-            const barWidth = (count / maxCount) * maxBarWidth;
-            
-            // Bar background
-            ctx.fillStyle = '#222';
-            ctx.fillRect(140, y, maxBarWidth, barHeight);
-            
-            // Bar fill - solid blue
-            ctx.fillStyle = '#694EFF';
-            ctx.fillRect(140, y, barWidth, barHeight);
-            
-            // Label
-            ctx.fillStyle = '#FFFFA3';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'right';
-            ctx.fillText(`×${combo}`, 130, y + 27);
-            
-            // Count
-            ctx.fillStyle = '#FFFFA3';
-            ctx.textAlign = 'left';
-            ctx.fillText(count.toString(), 650, y + 27);
-        });
-    } else {
-        ctx.fillStyle = '#888';
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('No combos achieved yet!', canvas.width / 2, 250);
-    }
-    
-    // Website info
-    ctx.fillStyle = '#FF383F';
-    ctx.font = '18px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('mentalstrainrecords.com', canvas.width / 2, canvas.height - 30);
-    
-    // Convert to blob and download
-    canvas.toBlob(blob => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = `msr-combo-stats-${Date.now()}.png`;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-        console.log('Stats image exported!');
-    });
-}
-
-function showComboStats() {
-    const modal = document.createElement('div');
-    modal.id = 'combo-stats-modal';
-    modal.className = 'modal-overlay';
-    
-    const maxCount = Math.max(...Object.values(comboStats), 1);
-    const sortedCombos = Object.keys(comboStats).map(Number).sort((a, b) => a - b);
-    
-    const statsHTML = sortedCombos.length > 0 
-        ? sortedCombos.map(combo => {
-            const count = comboStats[combo];
-            const percentage = (count / maxCount) * 100;
-            return `
-                <div class="stat-row">
-                    <div class="stat-label">×${combo}</div>
-                    <div class="stat-bar-container">
-                        <div class="stat-bar" style="width: ${percentage}%"></div>
-                    </div>
-                    <div class="stat-count">${count}</div>
-                </div>
-            `;
-        }).join('')
-        : '<p style="text-align: center; color: #888;">No combos achieved yet!</p>';
-    
-    modal.innerHTML = `
-        <div class="modal-content">
-            <button class="modal-close" id="close-stats-modal">&times;</button>
-            <h2>Combo Statistics</h2>
-            <div class="stats-container">
-                ${statsHTML}
-            </div>
-            <div class="stats-summary">
-                <p><strong>Total Combos:</strong> ${Object.values(comboStats).reduce((a, b) => a + b, 0)}</p>
-                <p><strong>Highest:</strong> ×${highestCombo}</p>
-            </div>
-            <div class="modal-buttons">
-                <button class="share-stats-btn" id="share-stats-btn">Share Stats</button>
-                <button class="reset-stats-btn" id="reset-stats-btn">Reset Statistics</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Close modal handlers
-    const closeBtn = document.getElementById('close-stats-modal');
-    const resetBtn = document.getElementById('reset-stats-btn');
-    const shareBtn = document.getElementById('share-stats-btn');
-    const closeModal = () => modal.remove();
-    
-    closeBtn.addEventListener('click', closeModal);
-    shareBtn.addEventListener('click', () => exportStatsImage());
-    resetBtn.addEventListener('click', () => {
-        if (confirm('Are you sure you want to reset all combo statistics? This cannot be undone.')) {
-            // Reset all stats
-            comboStats = {};
-            highestCombo = 0;
-            localStorage.removeItem('msr-combo-stats');
-            localStorage.removeItem('msr-highest-combo');
-            
-            // Close modal and update display
-            closeModal();
-            updateComboDisplay();
-            
-            // Show confirmation
-            console.log('Combo statistics have been reset.');
-        }
-    });
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
-}
-
 albumList.addEventListener("mouseover", (e) => {
     if (window.innerWidth <= 768) return;
 
@@ -1179,7 +810,7 @@ albumList.addEventListener("mouseover", (e) => {
 
     let randomClass;
     
-    if (comboGameEnabled) {
+    if (ColourComboGame.isEnabled()) {
         // When game is active: true 1/3 odds, can repeat colors
         randomClass = colors[Math.floor(Math.random() * colors.length)];
     } else {
@@ -1200,27 +831,13 @@ albumList.addEventListener("mouseover", (e) => {
     album.classList.add(randomClass);
 
     // Only run combo game logic if game is enabled
-    if (!comboGameEnabled) return;
+    if (!ColourComboGame.isEnabled()) return;
 
     // Add game-active class when game is enabled
     album.classList.add("game-active");
 
-    // Combo game logic
-    if (lastComboColor === randomClass || devMode) {
-        comboCount++;
-        if (comboCount >= 3) {
-            showComboPopup(comboCount, randomClass);
-        }
-    } else {
-        // Track the final combo that was achieved before breaking
-        if (comboCount >= 2) {
-            comboStats[comboCount] = (comboStats[comboCount] || 0) + 1;
-            saveGameData();
-        }
-        comboCount = 1;
-        lastComboColor = randomClass;
-    }
-    updateComboDisplay();
+    // Handle combo tracking via game module
+    ColourComboGame.handleHover(randomClass);
 });
 
 albumList.addEventListener("mouseout", (e) => {
@@ -1228,7 +845,7 @@ albumList.addEventListener("mouseout", (e) => {
     if (!album || (e.relatedTarget && album.contains(e.relatedTarget))) return;
 
     // Only remove border if game is not active
-    if (!comboGameEnabled) {
+    if (!ColourComboGame.isEnabled()) {
         album.classList.remove("color-red", "color-green", "color-blue");
     }
 
@@ -1321,65 +938,41 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Combo game enable via logo long-press
-const logo = document.getElementById('logo');
-let holdTimer = null;
-let holdStartTime = 0;
-let shakeInterval = null;
+// Combo game enable/disable via search box "start" and "stop" commands
+searchBar.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const command = searchBar.value.trim().toLowerCase();
+        
+        if (command === 'start') {
+            e.preventDefault();
+            if (!ColourComboGame.isEnabled()) {
+                ColourComboGame.enable();
+                searchBar.value = '';
+                searchClearBtn.classList.add('hidden');
+            }
+        } else if (command === 'stop') {
+            e.preventDefault();
+            searchBar.value = '';
+            searchClearBtn.classList.add('hidden');
+            location.reload();
+        }
+    }
+});
 
-if (logo) {
-    const startHold = (e) => {
-        if (comboGameEnabled) return;
-        e.preventDefault();
-        
-        holdStartTime = Date.now();
-        logo.style.cursor = 'pointer';
-        
-        // Gradually increase shake
-        shakeInterval = setInterval(() => {
-            const elapsed = Date.now() - holdStartTime;
-            const progress = Math.min(elapsed / 3000, 1);
-            const shakeIntensity = progress * 10;
-            logo.style.setProperty('--shake-intensity', `${shakeIntensity}px`);
-            logo.classList.add('shaking');
-        }, 50);
-        
-        // Enable game after 3 seconds
-        holdTimer = setTimeout(() => {
-            enableComboGame();
-            stopHold();
-        }, 3000);
-    };
-    
-    const stopHold = () => {
-        if (holdTimer) {
-            clearTimeout(holdTimer);
-            holdTimer = null;
-        }
-        if (shakeInterval) {
-            clearInterval(shakeInterval);
-            shakeInterval = null;
-        }
-        logo.classList.remove('shaking');
-        logo.style.removeProperty('--shake-intensity');
-    };
-    
-    logo.addEventListener('mousedown', startHold);
-    logo.addEventListener('mouseup', stopHold);
-    logo.addEventListener('mouseleave', stopHold);
-    logo.addEventListener('touchstart', startHold);
-    logo.addEventListener('touchend', stopHold);
-    logo.addEventListener('touchcancel', stopHold);
+// Shop button click handler
+const shopButton = document.getElementById('shop-button-footer');
+if (shopButton) {
+    shopButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ColourComboGame.openShop();
+    });
 }
 
-// High score stats click handler
-const highScoreDisplay = document.getElementById('high-score-display');
-if (highScoreDisplay) {
-    highScoreDisplay.addEventListener('click', (e) => {
+// Stats button click handler
+const statsButton = document.getElementById('stats-button-footer');
+if (statsButton) {
+    statsButton.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (comboGameEnabled) {
-            showComboStats();
-        }
+        ColourComboGame.showStats();
     });
-    highScoreDisplay.style.cursor = 'pointer';
 }
