@@ -1,10 +1,11 @@
 // Service Worker for Mental Strain Records
-const CACHE_NAME = 'msr-cache-v2';
+const CACHE_NAME = 'msr-cache-v3';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
     '/style.css',
     '/script.js',
+    '/colour-combo-game.js',
     '/assets/MSR26forweb2.svg',
     '/assets/apple-touch-icon.png',
     '/assets/favicon-32x32.png',
