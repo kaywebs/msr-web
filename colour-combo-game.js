@@ -23,6 +23,12 @@ window.ColourComboGame = (function() {
 
     // Format large numbers with abbreviations
     function formatNumber(num) {
+        if (num >= 1000000000000000) {
+            return '$' + (num / 1000000000000000).toFixed(1).replace(/\.0$/, '') + 'Q';
+        }
+        if (num >= 1000000000000) {
+            return '$' + (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + 'T';
+        }
         if (num >= 1000000000) {
             return '$' + (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
         }
@@ -34,6 +40,12 @@ window.ColourComboGame = (function() {
 
     // Compact format for stats page (abbreviates at 100k)
     function formatCurrencyCompact(num) {
+        if (num >= 1000000000000000) {
+            return '$' + (num / 1000000000000000).toFixed(1).replace(/\.0$/, '') + 'Q';
+        }
+        if (num >= 1000000000000) {
+            return '$' + (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + 'T';
+        }
         if (num >= 1000000000) {
             return '$' + (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
         }
@@ -79,134 +91,40 @@ window.ColourComboGame = (function() {
         incomeHistory.push({ time: Date.now(), amount });
     }
     
-    // Shop items (autoclickers)
+    // Shop items - new 3-upgrade system
     let shopItems = [
         {
-            id: 'basic-clicker',
-            name: 'Basic Clicker',
-            description: 'Automatically hovers an album every 5 seconds',
+            id: 'auto-clicker',
+            name: 'Auto Clicker',
+            description: 'Adds 1 automatic clicker',
             type: 'clicker',
             baseCost: 10,
             costMultiplier: 1.15,
             owned: 0,
-            interval: 5000,
+            interval: 1000, // 1 second = 1 action/sec
             timers: [],
-            nextFireTime: 0,
-            luckBonus: 0 // 0% chance to force combo continuation
+            nextFireTime: 0
         },
         {
-            id: 'fast-clicker',
-            name: 'Fast Clicker',
-            description: 'Hovers an album every 2 seconds (2% luck)',
-            type: 'clicker',
-            baseCost: 50,
-            costMultiplier: 1.2,
+            id: 'luck-upgrade',
+            name: 'Luck Upgrade',
+            description: 'Adds 0.1% luck to all auto clickers',
+            type: 'luck',
+            baseCost: 100,
+            costMultiplier: 1.116,
             owned: 0,
-            interval: 2000,
-            timers: [],
-            nextFireTime: 0,
-            luckBonus: 0.02 // 2% chance to force combo continuation
+            luckPerUpgrade: 0.001, // 0.1% per upgrade (max 10% at 100 upgrades)
+            maxOwned: 100 // Cap at 100 upgrades
         },
         {
-            id: 'speed-clicker',
-            name: 'Speed Clicker',
-            description: 'Hovers an album every second (4% luck)',
-            type: 'clicker',
-            baseCost: 250,
-            costMultiplier: 1.25,
-            owned: 0,
-            interval: 1000,
-            timers: [],
-            nextFireTime: 0,
-            luckBonus: 0.04 // 4% chance to force combo continuation
-        },
-        {
-            id: 'turbo-clicker',
-            name: 'Turbo Clicker',
-            description: 'Hovers an album every 0.5 seconds (6% luck)',
-            type: 'clicker',
-            baseCost: 1250,
-            costMultiplier: 1.3,
-            owned: 0,
-            interval: 500,
-            timers: [],
-            nextFireTime: 0,
-            luckBonus: 0.06 // 6% chance to force combo continuation
-        },
-        {
-            id: 'mega-clicker',
-            name: 'Mega Clicker',
-            description: 'Hovers an album every 0.2 seconds (8% luck)',
-            type: 'clicker',
-            baseCost: 6250,
-            costMultiplier: 1.35,
-            owned: 0,
-            interval: 200,
-            timers: [],
-            nextFireTime: 0,
-            luckBonus: 0.08 // 8% chance to force combo continuation
-        },
-        {
-            id: 'giga-clicker',
-            name: 'Giga Clicker',
-            description: 'Hovers an album every 0.1 seconds (10% luck)',
-            type: 'clicker',
-            baseCost: 50000,
-            costMultiplier: 1.4,
-            owned: 0,
-            interval: 100,
-            timers: [],
-            nextFireTime: 0,
-            requiresAllClickersAtTen: true,
-            luckBonus: 0.10 // 10% chance to force combo continuation
-        },
-        {
-            id: 'multiplier-1',
-            name: 'Double Vision',
-            description: 'Doubles all combo rewards (2x multiplier)',
+            id: 'combo-multiplier',
+            name: 'Combo Multiplier',
+            description: 'Multiplies all combo rewards',
             type: 'multiplier',
             baseCost: 10000,
-            multiplierValue: 2,
-            owned: 0
-        },
-        {
-            id: 'multiplier-2',
-            name: 'Triple Threat',
-            description: 'Triples all combo rewards (3x multiplier)',
-            type: 'multiplier',
-            baseCost: 50000,
-            multiplierValue: 3,
-            owned: 0
-        },
-        {
-            id: 'multiplier-3',
-            name: 'Quintuple Power',
-            description: 'Multiplies all combo rewards by 5',
-            type: 'multiplier',
-            baseCost: 250000,
-            multiplierValue: 5,
+            costMultiplier: 1.995,
             owned: 0,
-            requiresAllClickersAtTen: true
-        },
-        {
-            id: 'multiplier-4',
-            name: 'Lucky Seven',
-            description: 'Multiplies all combo rewards by 7',
-            type: 'multiplier',
-            baseCost: 1500000,
-            multiplierValue: 7,
-            owned: 0,
-            requiresAllClickersAtTen: true
-        },
-        {
-            id: 'multiplier-5',
-            name: 'Perfect Ten',
-            description: 'Multiplies all combo rewards by 10',
-            type: 'multiplier',
-            baseCost: 10000000,
-            multiplierValue: 10,
-            owned: 0,
-            requiresAllClickersAtTen: true
+            multiplierValues: [2, 3, 4, 5, 5, 6, 6, 7, 7, 10] // Progressive multipliers (additive, reaches 50x at 10th)
         }
     ];
     
@@ -228,8 +146,16 @@ window.ColourComboGame = (function() {
     // Calculate current cost of an item
     function getItemCost(item) {
         if (item.type === 'multiplier') {
-            // Multipliers can only be bought once
-            return item.owned > 0 ? Infinity : item.baseCost;
+            // Check if we've reached the max multipliers
+            if (item.owned >= item.multiplierValues.length) {
+                return Infinity;
+            }
+        }
+        if (item.type === 'luck' && item.maxOwned !== undefined) {
+            // Check if we've reached max luck upgrades
+            if (item.owned >= item.maxOwned) {
+                return Infinity;
+            }
         }
         return Math.floor(item.baseCost * Math.pow(item.costMultiplier, item.owned));
     }
@@ -274,25 +200,33 @@ window.ColourComboGame = (function() {
         });
     }
 
-    // Check if item requirements are met
-    function meetsRequirements(item) {
-        if (!item.requiresAllClickersAtTen) return true;
-        
-        // Only check the basic 5 autoclickers (not items that also require this condition)
-        const basicAutoClickers = shopItems.filter(i => 
-            i.type === 'clicker' && !i.requiresAllClickersAtTen
-        );
-        return basicAutoClickers.every(clicker => clicker.owned >= 10);
+    // Check if player has completed early game (100 actions/sec)
+    function isEarlyGameComplete() {
+        return calculateActionsPerSecond() >= 100;
     }
     
-    // Calculate total multiplier from all purchased multiplier items
+    // Check if item requirements are met
+    function meetsRequirements(item) {
+        if (item.requiresEarlyGameComplete) {
+            return isEarlyGameComplete();
+        }
+        return true;
+    }
+    
+    // Calculate total multiplier from purchased multiplier upgrades
     function calculateTotalMultiplier() {
+        const multiplierItem = shopItems.find(i => i.type === 'multiplier');
+        if (!multiplierItem || multiplierItem.owned === 0) {
+            comboMultiplier = 1;
+            return 1;
+        }
+        
+        // Add multipliers together instead of compounding them
         let total = 1;
-        shopItems.forEach(item => {
-            if (item.type === 'multiplier' && item.owned > 0) {
-                total *= item.multiplierValue;
-            }
-        });
+        for (let i = 0; i < multiplierItem.owned && i < multiplierItem.multiplierValues.length; i++) {
+            total += multiplierItem.multiplierValues[i];
+        }
+        
         comboMultiplier = total;
         return total;
     }
@@ -301,22 +235,14 @@ window.ColourComboGame = (function() {
     function calculateComboOdds(comboLength) {
         if (comboLength < 2) return 100;
         
-        // Calculate average luck bonus from owned autoclickers
-        const ownedClickers = shopItems.filter(item => item.type === 'clicker' && item.owned > 0);
-        const totalActions = ownedClickers.reduce((sum, item) => sum + item.owned, 0);
-        
-        let averageLuck = 0;
-        if (totalActions > 0) {
-            const weightedLuck = ownedClickers.reduce((sum, item) => {
-                return sum + (item.luckBonus * item.owned);
-            }, 0);
-            averageLuck = weightedLuck / totalActions;
-        }
+        // Get total luck from luck upgrades
+        const luckItem = shopItems.find(i => i.type === 'luck');
+        const totalLuck = luckItem ? luckItem.owned * luckItem.luckPerUpgrade : 0;
         
         // Effective match chance calculation:
         // P(match) = P(natural match) + P(no natural match) × P(luck triggers)
-        // = 1/3 + (2/3) × averageLuck
-        const effectiveChance = (1/3) + ((2/3) * averageLuck);
+        // = 1/3 + (2/3) × totalLuck
+        const effectiveChance = (1/3) + ((2/3) * totalLuck);
         
         // Need (comboLength - 1) consecutive matches
         const odds = Math.pow(effectiveChance, comboLength - 1) * 100;
@@ -325,7 +251,7 @@ window.ColourComboGame = (function() {
     }
     
     // Simulate an automatic album hover (runs in background without visual effects)
-    function simulateHover(item = null) {
+    function simulateHover() {
         if (!comboGameEnabled) return;
         
         const colors = ['color-red', 'color-green', 'color-blue'];
@@ -333,10 +259,11 @@ window.ColourComboGame = (function() {
         // True 1/3 chance to match the last color
         let randomColor = colors[Math.floor(Math.random() * colors.length)];
         
-        // Apply luck bonus from autoclicker if provided
-        const luckBonus = item?.luckBonus || 0;
+        // Apply global luck bonus from luck upgrades
+        const luckItem = shopItems.find(i => i.type === 'luck');
+        const totalLuck = luckItem ? luckItem.owned * luckItem.luckPerUpgrade : 0;
         const luckRoll = Math.random();
-        if (luckBonus > 0 && luckRoll < luckBonus && lastComboColor) {
+        if (totalLuck > 0 && luckRoll < totalLuck && lastComboColor) {
             // Force the color to match for a lucky hit!
             randomColor = lastComboColor;
         }
@@ -384,24 +311,26 @@ window.ColourComboGame = (function() {
     
     // Start an autoclicker
     function startAutoclicker(item) {
-        if (item.owned === 0) return;
+        if (item.owned === 0 || item.type !== 'clicker') return;
         
         // Clear existing timers for this item
         item.timers.forEach(timer => clearInterval(timer));
         item.timers = [];
         
-        // Set initial fire time
-        item.nextFireTime = Date.now() + item.interval;
+        // Calculate firing rate: owned count = actions per second
+        // So if owned = 5, fire every 200ms (1000ms / 5)
+        const firingInterval = item.interval / item.owned;
         
-        // Create one interval per owned item
-        for (let i = 0; i < item.owned; i++) {
-            const timer = setInterval(() => {
-                simulateHover(item);
-                // Update next fire time
-                item.nextFireTime = Date.now() + item.interval;
-            }, item.interval);
-            item.timers.push(timer);
-        }
+        // Set initial fire time
+        item.nextFireTime = Date.now() + firingInterval;
+        
+        // Create a single interval that fires at the calculated rate
+        const timer = setInterval(() => {
+            simulateHover();
+            // Update next fire time
+            item.nextFireTime = Date.now() + firingInterval;
+        }, firingInterval);
+        item.timers.push(timer);
     }
     
     // Save game data to localStorage
@@ -484,8 +413,24 @@ window.ColourComboGame = (function() {
         
         const popup = document.createElement('div');
         popup.className = `combo-popup ${color}`;
-        const multiplierText = comboMultiplier > 1 ? ` (${comboMultiplier}x)` : '';
-        popup.textContent = `×${count} +$${value}${multiplierText}`;
+        
+        // Format multiplier with abbreviations
+        let formattedMultiplier = comboMultiplier;
+        if (comboMultiplier >= 1000000000000000) {
+            formattedMultiplier = (comboMultiplier / 1000000000000000).toFixed(1).replace(/\.0$/, '') + 'Q';
+        } else if (comboMultiplier >= 1000000000000) {
+            formattedMultiplier = (comboMultiplier / 1000000000000).toFixed(1).replace(/\.0$/, '') + 'T';
+        } else if (comboMultiplier >= 1000000000) {
+            formattedMultiplier = (comboMultiplier / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+        } else if (comboMultiplier >= 1000000) {
+            formattedMultiplier = (comboMultiplier / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+        } else if (comboMultiplier >= 1000) {
+            formattedMultiplier = (comboMultiplier / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+        }
+        
+        const multiplierText = comboMultiplier > 1 ? ` (${formattedMultiplier}x)` : '';
+        const formattedValue = formatNumber(value).replace('$', '');
+        popup.textContent = `×${count} +$${formattedValue}${multiplierText}`;
         popup.style.left = `${Math.random() * 60 + 20}%`;
         popup.style.top = `${Math.random() * 40 + 30}%`;
         document.body.appendChild(popup);
@@ -495,14 +440,11 @@ window.ColourComboGame = (function() {
             shakeScreen(count);
         }
         
-        // Check if player is in early game (hasn't reached 10 of each basic autoclicker)
-        const basicAutoClickers = shopItems.filter(item => 
-            item.type === 'clicker' && !item.requiresAllClickersAtTen
-        );
-        const hasAllClickersAtTen = basicAutoClickers.every(item => item.owned >= 10);
+        // Check if player is in early game (hasn't reached 100 actions/sec)
+        const hasCompletedEarlyGame = isEarlyGameComplete();
         
         // Play sound for high combos (x6+) always, or low combos (x2-x5) only in early game
-        const shouldPlaySound = count >= 6 || !hasAllClickersAtTen;
+        const shouldPlaySound = count >= 6 || !hasCompletedEarlyGame;
         
         if (comboGameEnabled && shouldPlaySound) {
             setTimeout(async () => {
@@ -526,14 +468,8 @@ window.ColourComboGame = (function() {
                         3135.96  // G7
                     ];
                     
-                    // Get note based on combo count
-                    // In late game, x6 starts at the lowest note (index 0)
-                    let noteIndex;
-                    if (hasAllClickersAtTen && count >= 6) {
-                        noteIndex = Math.min(count - 6, cMajorChord.length - 1);
-                    } else {
-                        noteIndex = Math.min(count - 1, cMajorChord.length - 1);
-                    }
+                    // Get note based on combo count (count - 1 to start at index 0 for x1)
+                    const noteIndex = Math.min(count - 1, cMajorChord.length - 1);
                     
                     // Calculate arpeggio delay: if notes are triggered close together,
                     // delay them slightly based on pitch (lower notes play first)
@@ -586,12 +522,9 @@ window.ColourComboGame = (function() {
             document.body.style.setProperty('--impact-scale', impactScale);
         }
         
-        // Check if player is in early game (hasn't reached 10 of each basic autoclicker)
-        const basicAutoClickers = shopItems.filter(item => 
-            item.type === 'clicker' && !item.requiresAllClickersAtTen
-        );
-        const hasAllClickersAtTen = basicAutoClickers.every(item => item.owned >= 10);
-        const minComboToShow = hasAllClickersAtTen ? 6 : 2;
+        // Check if player is in early game (hasn't reached 100 actions/sec)
+        const hasCompletedEarlyGame = isEarlyGameComplete();
+        const minComboToShow = hasCompletedEarlyGame ? 6 : 2;
         
         // Show/hide combo counter with proper fade behavior
         const shouldShow = comboGameEnabled && comboCount >= minComboToShow;
@@ -636,21 +569,21 @@ window.ColourComboGame = (function() {
             const cost = getItemCost(item);
             const meetsReqs = meetsRequirements(item);
             const canAfford = comboPoints >= cost && cost !== Infinity && meetsReqs;
-            const isPurchased = item.type === 'multiplier' && item.owned > 0;
+            const isPurchased = (item.type === 'multiplier' && cost === Infinity) || (item.type === 'luck' && item.maxOwned !== undefined && item.owned >= item.maxOwned);
             const isLocked = !meetsReqs && !isPurchased;
             
             return `
                 <div class="shop-item ${canAfford ? 'affordable' : 'expensive'} ${isPurchased ? 'purchased' : ''} ${isLocked ? 'locked' : ''}" data-item-id="${item.id}">
                     <div class="shop-item-header">
                         <h3>${item.name}</h3>
-                        <span class="shop-item-owned" data-owned>${item.type === 'multiplier' ? (item.owned > 0 ? '✓ Owned' : 'Not Owned') : `Owned: ${item.owned}`}</span>
+                        <span class="shop-item-owned" data-owned>${isPurchased ? 'MAX' : `Owned: ${item.owned}`}</span>
                     </div>
                     <p class="shop-item-description">${item.description}</p>
                     ${item.type === 'clicker' ? `<p class="shop-item-stats">+${(1000 / item.interval).toFixed(1)} actions/sec</p>` : ''}
+                    ${item.type === 'luck' && item.owned > 0 ? `<p class="shop-item-stats">Current: ${(item.owned * item.luckPerUpgrade * 100).toFixed(2)}% luck</p>` : ''}
                     ${isLocked ? '<p class="shop-requirement">Requires: 10 of each autoclicker</p>' : ''}
-                    ${item.type === 'clicker' && item.owned > 0 ? '<div class="clicker-progress-bar"><div class="clicker-progress-fill" data-progress></div></div>' : ''}
                     <button class="shop-buy-btn" data-item-id="${item.id}" ${!canAfford || isPurchased || isLocked ? 'disabled' : ''}>
-                        <span data-button-text>${isPurchased ? 'Purchased' : isLocked ? 'Locked' : `Buy for ${formatNumber(cost)}`}</span>
+                        <span data-button-text>${isPurchased ? 'MAX' : isLocked ? 'Locked' : `Buy for ${formatNumber(cost)}`}</span>
                     </button>
                 </div>
             `;
@@ -674,7 +607,7 @@ window.ColourComboGame = (function() {
             const cost = getItemCost(item);
             const meetsReqs = meetsRequirements(item);
             const canAfford = comboPoints >= cost && cost !== Infinity && meetsReqs;
-            const isPurchased = item.type === 'multiplier' && item.owned > 0;
+            const isPurchased = cost === Infinity;
             const isLocked = !meetsReqs && !isPurchased;
             
             // Update classes
@@ -683,7 +616,7 @@ window.ColourComboGame = (function() {
             // Update owned text
             const ownedEl = itemEl.querySelector('[data-owned]');
             if (ownedEl) {
-                ownedEl.textContent = item.type === 'multiplier' ? (item.owned > 0 ? '✓ Owned' : 'Not Owned') : `Owned: ${item.owned}`;
+                ownedEl.textContent = `Owned: ${item.owned}`;
             }
             
             // Update button
@@ -691,39 +624,7 @@ window.ColourComboGame = (function() {
             const btnTextEl = itemEl.querySelector('[data-button-text]');
             if (btnEl && btnTextEl) {
                 btnEl.disabled = !canAfford || isPurchased || isLocked;
-                btnTextEl.textContent = isPurchased ? 'Purchased' : isLocked ? 'Locked' : `Buy for ${formatNumber(cost)}`;
-            }
-            
-            // Handle progress bar for clickers
-            if (item.type === 'clicker') {
-                let progressBarEl = itemEl.querySelector('.clicker-progress-bar');
-                
-                if (item.owned > 0) {
-                    // Create progress bar if it doesn't exist
-                    if (!progressBarEl) {
-                        progressBarEl = document.createElement('div');
-                        progressBarEl.className = 'clicker-progress-bar';
-                        progressBarEl.innerHTML = '<div class="clicker-progress-fill" data-progress></div>';
-                        
-                        // Insert before the button
-                        const button = itemEl.querySelector('.shop-buy-btn');
-                        if (button) {
-                            button.parentNode.insertBefore(progressBarEl, button);
-                        }
-                    }
-                    
-                    // Update progress
-                    const progressEl = itemEl.querySelector('[data-progress]');
-                    if (progressEl && item.nextFireTime > 0) {
-                        const now = Date.now();
-                        const timeLeft = Math.max(0, item.nextFireTime - now);
-                        const progress = Math.min(100, ((item.interval - timeLeft) / item.interval) * 100);
-                        progressEl.style.width = `${progress}%`;
-                    }
-                } else if (progressBarEl) {
-                    // Remove progress bar if owned is 0
-                    progressBarEl.remove();
-                }
+                btnTextEl.textContent = isPurchased ? 'Max Level' : isLocked ? 'Locked' : `Buy for ${formatNumber(cost)}`;
             }
         });
     }
@@ -735,7 +636,7 @@ window.ColourComboGame = (function() {
         
         // Check requirements
         if (!meetsRequirements(item)) {
-            alert('This item requires you to have 10 of each autoclicker first!');
+            alert('This item requires you to complete the early game (100 actions/sec)!');
             return;
         }
         
@@ -749,16 +650,9 @@ window.ColourComboGame = (function() {
             startAutoclicker(item);
             
             // Check if player just completed early game
-            if (!earlyGameCompleted) {
-                const basicAutoClickers = shopItems.filter(i => 
-                    i.type === 'clicker' && !i.requiresAllClickersAtTen
-                );
-                const hasAllClickersAtTen = basicAutoClickers.every(clicker => clicker.owned >= 10);
-                
-                if (hasAllClickersAtTen) {
-                    earlyGameCompleted = true;
-                    playEarlyGameCompletionJingle();
-                }
+            if (!earlyGameCompleted && isEarlyGameComplete()) {
+                earlyGameCompleted = true;
+                playEarlyGameCompletionJingle();
             }
         } else if (item.type === 'multiplier') {
             calculateTotalMultiplier();
@@ -1215,7 +1109,8 @@ window.ColourComboGame = (function() {
             } else {
                 // Award currency when combo breaks
                 if (comboCount >= 2) {
-                    const value = getComboValue(comboCount);
+                    const baseValue = getComboValue(comboCount);
+                    const value = Math.floor(baseValue * comboMultiplier);
                     comboPoints += value;
                     trackIncome(value);
                     totalCombosEarned++;

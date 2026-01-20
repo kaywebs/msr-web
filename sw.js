@@ -1,5 +1,5 @@
 // Service Worker for Mental Strain Records
-const CACHE_NAME = 'msr-cache-v3';
+const CACHE_NAME = 'msr-cache-v4';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',

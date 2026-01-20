@@ -411,7 +411,7 @@ function renderAboutPage() {
 
     aboutPage.innerHTML = qs(`
         <h2>About Mental Strain Records</h2>
-        <p>Mental Strain Records is an independent record label based in Penticton, B.C., dedicated to releasing local music and supporting local artists. Home of kwebspost. Please get into contact with us via email for any inquiries. Hold down the website logo for a surprise!</p>
+        <p>Mental Strain Records is an independent record label based in Penticton, B.C., dedicated to releasing local music and supporting local artists. Home of kwebspost. Please get into contact with us via email for any inquiries. Search for start...</p>
 
         <div class="about-section">
             <h3>Our Links</h3>
