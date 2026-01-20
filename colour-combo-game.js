@@ -313,8 +313,10 @@ window.ColourComboGame = (function() {
             averageLuck = weightedLuck / totalActions;
         }
         
-        // Effective match chance: base 1/3 + luck bonus
-        const effectiveChance = (1/3) + averageLuck;
+        // Effective match chance calculation:
+        // P(match) = P(natural match) + P(no natural match) × P(luck triggers)
+        // = 1/3 + (2/3) × averageLuck
+        const effectiveChance = (1/3) + ((2/3) * averageLuck);
         
         // Need (comboLength - 1) consecutive matches
         const odds = Math.pow(effectiveChance, comboLength - 1) * 100;
