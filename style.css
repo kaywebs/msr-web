@@ -842,6 +842,49 @@ main {
     border-color: #fff;
 }
 
+/* Artists Grid Layout */
+#about-page .artists-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+#about-page .artist-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+#about-page .artist-card .artist-image {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+#about-page .artist-card h4 {
+    margin: 0.5rem 0 0.25rem 0;
+    font-size: 1.2rem;
+}
+
+#about-page .artist-card p {
+    margin: 0 0 1rem 0;
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+#about-page .artist-card .artist-links {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+/* Legacy support for old artist-entry class */
 #about-page .artist-entry {
     margin-bottom: 2rem;
 }
@@ -854,6 +897,14 @@ main {
     margin-top: 1rem;
     margin-bottom: 1rem;
     border-radius: 4px;
+}
+
+/* Responsive: single column on smaller screens */
+@media (max-width: 768px) {
+    #about-page .artists-grid {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
 }
 
 /* Reusing animation for about page */

@@ -128,19 +128,24 @@ window.ColourComboGame = (function() {
         }
     ];
     
-    // Calculate combo value based on rarity (exponential scaling)
+    // Calculate combo value based on rarity (inversely proportional to probability)
+    // Values are balanced so rarer combos give exponentially more reward
     function getComboValue(comboLevel) {
         if (comboLevel < 2) return 0;
         
-        // Smaller rewards for early combos (x2-x5)
-        if (comboLevel < 6) {
-            // x2=1, x3=2, x4=4, x5=8
-            return Math.pow(2, comboLevel - 2);
-        }
+        // Base probabilities at 0% luck (1/3 chance per match):
+        // x2: 33.33% -> 1 point
+        // x3: 11.11% -> 3 points
+        // x4: 3.70% -> 9 points
+        // x5: 1.23% -> 27 points
+        // x6: 0.41% -> 81 points
+        // x7: 0.137% -> 243 points
+        // x8: 0.046% -> 729 points
+        // x9: 0.015% -> 2,187 points
+        // x10: 0.005% -> 6,561 points
+        // x11+: continues exponentially
         
-        // Rapid scaling starting at x6
-        // x6=100, x7=300, x8=900, x9=2700, x10=8100, etc.
-        return Math.floor(Math.pow(3, comboLevel - 5) * 100);
+        return Math.pow(3, comboLevel - 2);
     }
     
     // Calculate current cost of an item
@@ -250,7 +255,27 @@ window.ColourComboGame = (function() {
         return odds;
     }
     
-    // Simulate an automatic album hover (runs in background without visual effects)
+    // Flash a random album with the selected color
+    function flashRandomAlbum(colorClass) {
+        const albums = document.querySelectorAll('.album');
+        if (albums.length === 0) return;
+        
+        // Pick a random album to flash
+        const randomAlbum = albums[Math.floor(Math.random() * albums.length)];
+        
+        // Remove any existing color classes
+        randomAlbum.classList.remove('color-red', 'color-green', 'color-blue');
+        
+        // Add the new color class
+        randomAlbum.classList.add(colorClass);
+        
+        // Remove the color after a short duration (200ms)
+        setTimeout(() => {
+            randomAlbum.classList.remove(colorClass);
+        }, 200);
+    }
+    
+    // Simulate an automatic album hover (with visual effects)
     function simulateHover() {
         if (!comboGameEnabled) return;
         
@@ -267,6 +292,9 @@ window.ColourComboGame = (function() {
             // Force the color to match for a lucky hit!
             randomColor = lastComboColor;
         }
+        
+        // Flash a random album with the chosen color
+        flashRandomAlbum(randomColor);
         
         // Initialize lastComboColor if this is the first interaction
         if (!lastComboColor) {
@@ -451,7 +479,7 @@ window.ColourComboGame = (function() {
                 try {
                     const ctx = audioContext;
                     if (!ctx) return;
-                    
+                   
                     // C major chord notes going up octaves: C, E, G, C, E, G...
                     const cMajorChord = [
                         261.63, // C4
@@ -489,11 +517,14 @@ window.ColourComboGame = (function() {
                     oscillator.frequency.value = cMajorChord[noteIndex];
                     oscillator.type = 'sine';
                     
-                    gainNode.gain.setValueAtTime(0.1, startTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+                    // Smoother envelope to reduce clicking
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(0.1, startTime + 0.005); // Fast attack
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
+                    gainNode.gain.linearRampToValueAtTime(0.001, startTime + 0.3); // Smooth release
                     
                     oscillator.start(startTime);
-                    oscillator.stop(startTime + 0.3);
+                    oscillator.stop(startTime + 0.31);
                 } catch (e) {
                     console.log('Audio error:', e);
                 }
@@ -572,6 +603,18 @@ window.ColourComboGame = (function() {
             const isPurchased = (item.type === 'multiplier' && cost === Infinity) || (item.type === 'luck' && item.maxOwned !== undefined && item.owned >= item.maxOwned);
             const isLocked = !meetsReqs && !isPurchased;
             
+            // Calculate multiplier info for display
+            let multiplierInfo = '';
+            if (item.type === 'multiplier' && item.owned > 0) {
+                const currentMultiplier = calculateTotalMultiplier();
+                if (item.owned < item.multiplierValues.length) {
+                    const nextAddition = item.multiplierValues[item.owned];
+                    multiplierInfo = `<p class="shop-item-stats">Current: ×${currentMultiplier} (next: +${nextAddition})</p>`;
+                } else {
+                    multiplierInfo = `<p class="shop-item-stats">Current: ×${currentMultiplier}</p>`;
+                }
+            }
+            
             return `
                 <div class="shop-item ${canAfford ? 'affordable' : 'expensive'} ${isPurchased ? 'purchased' : ''} ${isLocked ? 'locked' : ''}" data-item-id="${item.id}">
                     <div class="shop-item-header">
@@ -581,6 +624,7 @@ window.ColourComboGame = (function() {
                     <p class="shop-item-description">${item.description}</p>
                     ${item.type === 'clicker' ? `<p class="shop-item-stats">+${(1000 / item.interval).toFixed(1)} actions/sec</p>` : ''}
                     ${item.type === 'luck' && item.owned > 0 ? `<p class="shop-item-stats">Current: ${(item.owned * item.luckPerUpgrade * 100).toFixed(2)}% luck</p>` : ''}
+                    ${multiplierInfo}
                     ${isLocked ? '<p class="shop-requirement">Requires: 10 of each autoclicker</p>' : ''}
                     <button class="shop-buy-btn" data-item-id="${item.id}" ${!canAfford || isPurchased || isLocked ? 'disabled' : ''}>
                         <span data-button-text>${isPurchased ? 'MAX' : isLocked ? 'Locked' : `Buy for ${formatNumber(cost)}`}</span>
@@ -1069,11 +1113,14 @@ window.ColourComboGame = (function() {
                     oscillator.type = 'sine';
                     
                     const startTime = ctx.currentTime + (index * (noteDuration + noteGap));
-                    gainNode.gain.setValueAtTime(0.2, startTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + noteDuration);
+                    // Smoother envelope to reduce clicking
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.005);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + noteDuration - 0.01);
+                    gainNode.gain.linearRampToValueAtTime(0.001, startTime + noteDuration);
                     
                     oscillator.start(startTime);
-                    oscillator.stop(startTime + noteDuration);
+                    oscillator.stop(startTime + noteDuration + 0.01);
                 });
                 
                 comboGameEnabled = true;

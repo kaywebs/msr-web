@@ -430,29 +430,51 @@ function renderAboutPage() {
 
         <div class="about-section">
             <h3>Our Artists</h3>
-            <div class="artist-entry">
-                <h4>kwebspost</h4>
-                <p>Experimental rock, based in Penticton, B.C.</p>
-
-                <img src="./assets/kwebspostimg.jpg" alt="kwebspost" class="artist-image" loading="lazy" decoding="async">
-
-                <div class="artist-links">
-                     <a href="https://open.spotify.com/artist/3AfA9MhbMBjEqjgMXAEDjp?si=Nkv010lFQyiD4BI13Gzq-A" target="_blank" rel="noopener" class="streaming-button">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/512px-Spotify_logo_without_text.svg.png" alt="Spotify">
-                     </a>
-                     <a href="https://music.apple.com/ca/artist/kwebspost/1631478274" target="_blank" rel="noopener" class="streaming-button">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Apple_Music_icon.svg/256px-Apple_Music_icon.svg.png" alt="Apple Music">
-                     </a>
-                     <a href="https://kwebspost.bandcamp.com" target="_blank" rel="noopener" class="streaming-button">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Bandcamp-button-circle-aqua.svg/512px-Bandcamp-button-circle-aqua.svg.png" alt="Bandcamp">
-                     </a>
-                     <a href="https://www.youtube.com/@kwebspost" target="_blank" rel="noopener" class="streaming-button">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/YouTube_Music_icon_2024.svg/512px-YouTube_Music_icon_2024.svg.png" alt="YouTube">
-                     </a>
-                     <a href="https://kwebs.ca/" target="_blank" rel="noopener" class="streaming-button">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/d/de/Terra_globe_icon_light.png" alt="Website">
-                     </a>
+            <div class="artists-grid">
+                <div class="artist-card">
+                    <img src="./assets/kwebspostimg.jpg" alt="kwebspost" class="artist-image" loading="lazy" decoding="async">
+                    <h4>kwebspost</h4>
+                    <p>Experimental rock, based in Penticton, B.C.</p>
+                    <div class="artist-links">
+                         <a href="https://open.spotify.com/artist/3AfA9MhbMBjEqjgMXAEDjp?si=Nkv010lFQyiD4BI13Gzq-A" target="_blank" rel="noopener" class="streaming-button">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/512px-Spotify_logo_without_text.svg.png" alt="Spotify">
+                         </a>
+                         <a href="https://music.apple.com/ca/artist/kwebspost/1631478274" target="_blank" rel="noopener" class="streaming-button">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Apple_Music_icon.svg/256px-Apple_Music_icon.svg.png" alt="Apple Music">
+                         </a>
+                         <a href="https://kwebspost.bandcamp.com" target="_blank" rel="noopener" class="streaming-button">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Bandcamp-button-circle-aqua.svg/512px-Bandcamp-button-circle-aqua.svg.png" alt="Bandcamp">
+                         </a>
+                         <a href="https://www.youtube.com/@kwebspost" target="_blank" rel="noopener" class="streaming-button">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/YouTube_Music_icon_2024.svg/512px-YouTube_Music_icon_2024.svg.png" alt="YouTube">
+                         </a>
+                         <a href="https://kwebs.ca/" target="_blank" rel="noopener" class="streaming-button">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/d/de/Terra_globe_icon_light.png" alt="Website">
+                         </a>
+                    </div>
                 </div>
+
+                <div class="artist-card">
+                    <img src="./assets/ambrelush.png" alt="Ambrelush" class="artist-image" loading="lazy" decoding="async">
+                    <h4>Ambrelush</h4>
+                    <p>Band based in Penticton, B.C.</p>
+                    <div class="artist-links">
+                     <a href="https://ambrelush.bandcamp.com/" target="_blank" rel="noopener" class="streaming-button">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Bandcamp-button-circle-aqua.svg/512px-Bandcamp-button-circle-aqua.svg.png" alt="Bandcamp">
+                         </a>
+                    </a>
+                         <a href="https://www.youtube.com/@ambrelush" target="_blank" rel="noopener" class="streaming-button">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/YouTube_Music_icon_2024.svg/512px-YouTube_Music_icon_2024.svg.png" alt="YouTube">
+                         </a>
+                    </div>
+                </div>
+                <!--<div class="artist-card">
+                    <img src="./assets/pissmissile.jpg" alt="Piss Missile" class="artist-image" loading="lazy" decoding="async">
+                    <h4>Piss Missile</h4>
+                    <p>Band based in Penticton, B.C.</p>
+                    <div class="artist-links">
+                    </div>
+                </div>-->
             </div>
         </div>
     `);
