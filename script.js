@@ -780,6 +780,8 @@ albumList.addEventListener("click", (e) => {
 searchBar.addEventListener("input", debounce(() => {
     if (searchBar.value.trim().length > 0) {
         searchClearBtn.classList.remove("hidden");
+        // Navigate to home page when user starts typing
+        location.hash = "";
     } else {
         searchClearBtn.classList.add("hidden");
     }

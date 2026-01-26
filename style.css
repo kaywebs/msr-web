@@ -252,44 +252,48 @@ header img {
 
 .share-stats-btn {
     flex: 1;
-    padding: 0.75rem 1.5rem;
-    background: #000;
+    padding: 10px 20px;
+    background: #694EFF;
     border: 2px solid #694EFF;
-    border-radius: 0;
-    color: #694EFF;
-    font-size: 0.9rem;
-    font-weight: 600;
+    color: #000;
     cursor: pointer;
-    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    font-weight: bold;
 }
 
 .share-stats-btn:hover {
-    background: rgba(105, 78, 255, 0.1);
+    background: #000;
+    color: #694EFF;
 }
 
 .share-stats-btn:active {
-    background: rgba(105, 78, 255, 0.2);
+    background: #000;
+    color: #694EFF;
 }
 
 .reset-stats-btn {
     flex: 1;
-    padding: 0.75rem 1.5rem;
-    background: #000;
+    padding: 10px 20px;
+    background: #FF383F;
     border: 2px solid #FF383F;
-    border-radius: 0;
-    color: #FF383F;
-    font-size: 0.9rem;
-    font-weight: 600;
+    color: #000;
     cursor: pointer;
-    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    font-weight: bold;
 }
 
 .reset-stats-btn:hover {
-    background: rgba(255, 56, 63, 0.1);
+    background: #000;
+    color: #FF383F;
 }
 
 .reset-stats-btn:active {
-    background: rgba(255, 56, 63, 0.2);
+    background: #000;
+    color: #FF383F;
 }
 
 @keyframes pulse {

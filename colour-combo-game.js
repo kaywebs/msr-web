@@ -12,6 +12,7 @@ window.ColourComboGame = (function() {
     let highestCombo = 0;
     let comboStats = {}; // Track how many times each combo level was achieved
     let devMode = false; // Dev mode for testing combos
+    let devForceMatches = false; // Dev mode: force all matches to succeed
     let comboPoints = 0; // Currency earned from combos
     let totalCombosEarned = 0; // Total combos completed
     let comboMultiplier = 1; // Total multiplier from upgrades
@@ -20,45 +21,65 @@ window.ColourComboGame = (function() {
     let incomeHistory = []; // Track recent income for $/sec calculation
     let lastIncomeTime = Date.now(); // Last time we earned currency
     let earlyGameCompleted = false; // Track if early game completion jingle has played
+    let actualActionsProcessed = 0; // Track actual actions processed
+    let actionsLastSecond = 0; // Actions processed in last second
+    let lastActionsResetTime = Date.now(); // Last time we reset the action counter
+    let pendingVisualUpdates = false; // Flag for batched visual updates
+    let autoclickerRAF = null; // Single RAF loop for all autoclickers
+    let soundsMuted = false; // Track if sound effects are muted
+    let shakeEnabled = true; // Track if shake effect is enabled
 
-    // Format large numbers with abbreviations
+    // Expanded number abbreviation system (abbreviate at 1 million and above)
+    const ABBREVIATIONS = [
+        { value: 1e66, symbol: 'Uvg' },
+        { value: 1e63, symbol: 'Vg' },
+        { value: 1e60, symbol: 'Nod' },
+        { value: 1e57, symbol: 'Ocd' },
+        { value: 1e54, symbol: 'Spd' },
+        { value: 1e51, symbol: 'Sxd' },
+        { value: 1e48, symbol: 'Qid' },
+        { value: 1e45, symbol: 'Qad' },
+        { value: 1e42, symbol: 'Td' },
+        { value: 1e39, symbol: 'Dd' },
+        { value: 1e36, symbol: 'Ud' },
+        { value: 1e33, symbol: 'Dc' },
+        { value: 1e30, symbol: 'No' },
+        { value: 1e27, symbol: 'Oc' },
+        { value: 1e24, symbol: 'Sp' },
+        { value: 1e21, symbol: 'Sx' },
+        { value: 1e18, symbol: 'Qi' },
+        { value: 1e15, symbol: 'Qa' },
+        { value: 1e12, symbol: 'T' },
+        { value: 1e9, symbol: 'B' },
+        { value: 1e6, symbol: 'M' }
+    ];
+
     function formatNumber(num) {
-        if (num >= 1000000000000000) {
-            return '$' + (num / 1000000000000000).toFixed(1).replace(/\.0$/, '') + 'Q';
+        if (num < 1e6) {
+            return '$' + num.toLocaleString();
         }
-        if (num >= 1000000000000) {
-            return '$' + (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + 'T';
-        }
-        if (num >= 1000000000) {
-            return '$' + (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
-        }
-        if (num >= 1000000) {
-            return '$' + (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+        for (let i = 0; i < ABBREVIATIONS.length; i++) {
+            if (num >= ABBREVIATIONS[i].value) {
+                return '$' + (num / ABBREVIATIONS[i].value).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + ABBREVIATIONS[i].symbol;
+            }
         }
         return '$' + num.toLocaleString();
     }
 
-    // Compact format for stats page (abbreviates at 100k)
+    // Compact format for stats page (abbreviates at 1 million)
     function formatCurrencyCompact(num) {
-        if (num >= 1000000000000000) {
-            return '$' + (num / 1000000000000000).toFixed(1).replace(/\.0$/, '') + 'Q';
+        if (num < 1e6) {
+            return '$' + num.toLocaleString();
         }
-        if (num >= 1000000000000) {
-            return '$' + (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + 'T';
-        }
-        if (num >= 1000000000) {
-            return '$' + (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
-        }
-        if (num >= 1000000) {
-            return '$' + (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-        }
-        if (num >= 100000) {
-            return '$' + (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+        for (let i = 0; i < ABBREVIATIONS.length; i++) {
+            if (num >= ABBREVIATIONS[i].value) {
+                return '$' + (num / ABBREVIATIONS[i].value).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + ABBREVIATIONS[i].symbol;
+            }
         }
         return '$' + num.toLocaleString();
     }
 
-    // Calculate actions per second from autoclickers
+    // Calculate actions per second from autoclickers (intended rate)
     function calculateActionsPerSecond() {
         let actionsPerSecond = 0;
         shopItems.filter(item => item.type === 'clicker').forEach(item => {
@@ -68,6 +89,11 @@ window.ColourComboGame = (function() {
             }
         });
         return actionsPerSecond;
+    }
+
+    // Get actual actions processed per second (measured)
+    function getActualActionsPerSecond() {
+        return actionsLastSecond;
     }
 
     // Calculate average income per second
@@ -113,8 +139,10 @@ window.ColourComboGame = (function() {
             baseCost: 100,
             costMultiplier: 1.116,
             owned: 0,
-            luckPerUpgrade: 0.001, // 0.1% per upgrade (max 10% at 100 upgrades)
-            maxOwned: 100 // Cap at 100 upgrades
+            luckPerUpgrade: 0.001, // 0.1% per upgrade
+            maxOwned: 300, // 100 per stage (10% luck per stage)
+            stageThresholds: [100, 200, 300], // Max owned at each stage
+            stageRequirements: [0, 100, 150] // Actions/sec required for each stage
         },
         {
             id: 'combo-multiplier',
@@ -124,7 +152,13 @@ window.ColourComboGame = (function() {
             baseCost: 10000,
             costMultiplier: 1.995,
             owned: 0,
-            multiplierValues: [2, 3, 4, 5, 5, 6, 6, 7, 7, 10] // Progressive multipliers (additive, reaches 50x at 10th)
+            multiplierValues: [
+                2, 3, 4, 5, 5, 6, 6, 7, 7, 10, // Stage 1: 0-9 (50x total)
+                10, 10, 11, 11, 12, 12, 13, 13, 14, 15, // Stage 2: 10-19 (+111x = 161x total)
+                15, 15, 16, 16, 17, 17, 18, 18, 19, 20  // Stage 3: 20-29 (+151x = 312x total)
+            ],
+            stageThresholds: [10, 20, 30], // Max owned at each stage
+            stageRequirements: [0, 100, 150] // Actions/sec required for each stage
         }
     ];
     
@@ -163,6 +197,50 @@ window.ColourComboGame = (function() {
             }
         }
         return Math.floor(item.baseCost * Math.pow(item.costMultiplier, item.owned));
+    }
+    
+    // Get the current stage limit for an item
+    function getCurrentStageLimit(item) {
+        if (!item.stageThresholds || !item.stageRequirements) {
+            return item.maxOwned || item.multiplierValues?.length || Infinity;
+        }
+        
+        const actionsPerSec = calculateActionsPerSecond();
+        let currentLimit = 0;
+        
+        for (let i = 0; i < item.stageRequirements.length; i++) {
+            if (actionsPerSec >= item.stageRequirements[i]) {
+                currentLimit = item.stageThresholds[i];
+            }
+        }
+        
+        return currentLimit;
+    }
+    
+    // Check if item is at current stage limit
+    function isAtStageLimit(item) {
+        const currentLimit = getCurrentStageLimit(item);
+        return item.owned >= currentLimit;
+    }
+    
+    // Get next stage requirement text
+    function getNextStageRequirement(item) {
+        if (!item.stageThresholds || !item.stageRequirements) {
+            return null;
+        }
+        
+        const actionsPerSec = calculateActionsPerSecond();
+        
+        for (let i = 0; i < item.stageRequirements.length; i++) {
+            if (actionsPerSec < item.stageRequirements[i]) {
+                return {
+                    required: item.stageRequirements[i],
+                    limit: item.stageThresholds[i]
+                };
+            }
+        }
+        
+        return null;
     }
 
     // Play early game completion jingle
@@ -215,6 +293,10 @@ window.ColourComboGame = (function() {
         if (item.requiresEarlyGameComplete) {
             return isEarlyGameComplete();
         }
+        // Check if at stage limit
+        if (isAtStageLimit(item)) {
+            return false;
+        }
         return true;
     }
     
@@ -228,10 +310,14 @@ window.ColourComboGame = (function() {
         
         // Add multipliers together instead of compounding them
         let total = 1;
-        for (let i = 0; i < multiplierItem.owned && i < multiplierItem.multiplierValues.length; i++) {
-            total += multiplierItem.multiplierValues[i];
+        const maxIndex = multiplierItem.multiplierValues.length - 1;
+        for (let i = 0; i < multiplierItem.owned; i++) {
+            if (i < multiplierItem.multiplierValues.length) {
+                total += multiplierItem.multiplierValues[i];
+            } else {
+                total += multiplierItem.multiplierValues[maxIndex]; // repeat last increment
+            }
         }
-        
         comboMultiplier = total;
         return total;
     }
@@ -239,24 +325,68 @@ window.ColourComboGame = (function() {
     // Calculate the odds of achieving a specific combo length
     function calculateComboOdds(comboLength) {
         if (comboLength < 2) return 100;
-        
+
         // Get total luck from luck upgrades
         const luckItem = shopItems.find(i => i.type === 'luck');
         const totalLuck = luckItem ? luckItem.owned * luckItem.luckPerUpgrade : 0;
-        
+
         // Effective match chance calculation:
         // P(match) = P(natural match) + P(no natural match) × P(luck triggers)
         // = 1/3 + (2/3) × totalLuck
         const effectiveChance = (1/3) + ((2/3) * totalLuck);
-        
-        // Need (comboLength - 1) consecutive matches
-        const odds = Math.pow(effectiveChance, comboLength - 1) * 100;
-        
+
+        // For 2x combo, odds should be just the effectiveChance, not squared
+        let odds;
+        if (comboLength === 2) {
+            odds = effectiveChance * 100;
+        } else {
+            // Need (comboLength - 1) consecutive matches
+            odds = Math.pow(effectiveChance, comboLength - 1) * 100;
+        }
         return odds;
     }
     
-    // Flash a random album with the selected color
+    // Format odds text with progressive decimal places for low probabilities
+    function formatOddsText(odds, comboLevel, asFraction = false) {
+        if (asFraction) {
+            // Convert percent odds to 1/x odds
+            if (odds <= 0) return 'Impossible';
+            const frac = 100 / odds;
+            // Use formatNumber for abbreviation (K, M, B, etc)
+            let formatted;
+            if (frac >= 1000000) {
+                formatted = formatNumber(Math.round(frac)).replace('$', '');
+            } else if (frac >= 100) {
+                formatted = Math.round(frac).toLocaleString();
+            } else {
+                formatted = frac.toFixed(2);
+            }
+            return `1 in ${formatted}`;
+        }
+        // Starting at 14x, show more decimal places for very low odds
+        if (comboLevel >= 14) {
+            let decimalPlaces = 4 + Math.max(0, (comboLevel - 13) * 2);
+            decimalPlaces = Math.min(decimalPlaces, 20);
+            return odds.toExponential(decimalPlaces) + '%';
+        }
+        // For combos below 14x, use standard 4 decimal places
+        return odds >= 0.0001 ? odds.toFixed(4) + '%' : '<0.0001%';
+    }
+    
+    // Flash a random album with the selected color (throttled to max 60fps)
+    let lastFlashTime = 0;
+    let pendingFlashColor = null;
+    
     function flashRandomAlbum(colorClass) {
+        // Store the color but throttle the actual DOM update
+        pendingFlashColor = colorClass;
+        pendingVisualUpdates = true;
+    }
+    
+    // Actual flash implementation (called once per frame max)
+    function performFlash() {
+        if (!pendingFlashColor) return;
+        
         const albums = document.querySelectorAll('.album');
         if (albums.length === 0) return;
         
@@ -267,17 +397,22 @@ window.ColourComboGame = (function() {
         randomAlbum.classList.remove('color-red', 'color-green', 'color-blue');
         
         // Add the new color class
-        randomAlbum.classList.add(colorClass);
+        randomAlbum.classList.add(pendingFlashColor);
         
         // Remove the color after a short duration (200ms)
         setTimeout(() => {
-            randomAlbum.classList.remove(colorClass);
+            randomAlbum.classList.remove(pendingFlashColor);
         }, 200);
+        
+        pendingFlashColor = null;
     }
     
-    // Simulate an automatic album hover (with visual effects)
-    function simulateHover() {
+    // Simulate an automatic album hover (optimized for batch processing)
+    function simulateHover(skipVisuals = false) {
         if (!comboGameEnabled) return;
+        
+        // Track action count
+        actualActionsProcessed++;
         
         const colors = ['color-red', 'color-green', 'color-blue'];
         
@@ -293,20 +428,23 @@ window.ColourComboGame = (function() {
             randomColor = lastComboColor;
         }
         
-        // Flash a random album with the chosen color
-        flashRandomAlbum(randomColor);
+        // Flash a random album with the chosen color (throttled)
+        if (!skipVisuals) {
+            flashRandomAlbum(randomColor);
+        }
         
         // Initialize lastComboColor if this is the first interaction
         if (!lastComboColor) {
             lastComboColor = randomColor;
             comboCount = 1;
+            pendingVisualUpdates = true;
             return;
         }
         
-        // Check if color matches (or dev mode)
-        if (lastComboColor === randomColor || devMode) {
+        // Check if color matches (or dev force matches)
+        if (lastComboColor === randomColor || devForceMatches) {
             comboCount++;
-            if (comboCount >= 3) {
+            if (comboCount >= 3 && !skipVisuals) {
                 showComboPopup(comboCount, randomColor);
             }
         } else {
@@ -318,47 +456,99 @@ window.ColourComboGame = (function() {
                 trackIncome(value);
                 totalCombosEarned++;
                 comboStats[comboCount] = (comboStats[comboCount] || 0) + 1;
-                saveGameData();
                 
-                // Play special sound based on combo achieved
-                if (comboCount >= 10) {
-                    const godlikeAudio = new Audio('./assets/audio/godlike.mp3');
-                    godlikeAudio.volume = 1.0;
-                    godlikeAudio.play().catch(e => console.log('Failed to play godlike sound:', e));
-                } else if (comboCount === 9) {
-                    const holyShitAudio = new Audio('./assets/audio/holyshit.mp3');
-                    holyShitAudio.volume = 1.0;
-                    holyShitAudio.play().catch(e => console.log('Failed to play holy shit sound:', e));
+                // Play special sound based on combo achieved (throttled)
+                if (!skipVisuals && !soundsMuted) {
+                    if (comboCount >= 10) {
+                        const godlikeAudio = new Audio('./assets/audio/godlike.mp3');
+                        godlikeAudio.volume = 1.0;
+                        godlikeAudio.play().catch(e => console.log('Failed to play godlike sound:', e));
+                    } else if (comboCount === 9) {
+                        const holyShitAudio = new Audio('./assets/audio/holyshit.mp3');
+                        holyShitAudio.volume = 1.0;
+                        holyShitAudio.play().catch(e => console.log('Failed to play holy shit sound:', e));
+                    }
+                }
+                
+                // Save less frequently (every 10th combo or high combos)
+                if (totalCombosEarned % 10 === 0 || comboCount >= 8) {
+                    saveGameData();
                 }
             }
             comboCount = 1;
             lastComboColor = randomColor;
         }
-        updateComboDisplay();
+        
+        pendingVisualUpdates = true;
     }
     
-    // Start an autoclicker
+    // Start the unified autoclicker system (single RAF loop for all clickers)
+    function startAutoclickerSystem() {
+        // Stop existing RAF loop if running
+        if (autoclickerRAF) {
+            cancelAnimationFrame(autoclickerRAF);
+        }
+        
+        let lastFrameTime = performance.now();
+        
+        function autoclickerLoop(currentTime) {
+            if (!comboGameEnabled) return;
+            
+            const deltaTime = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+            
+            // Process each autoclicker item
+            shopItems.filter(item => item.type === 'clicker' && item.owned > 0).forEach(item => {
+                // Calculate how many actions should fire this frame
+                const actionsPerMs = item.owned / item.interval;
+                const actionsDue = actionsPerMs * deltaTime;
+                
+                // Accumulate fractional actions
+                if (!item.accumulatedActions) item.accumulatedActions = 0;
+                item.accumulatedActions += actionsDue;
+                
+                // Process whole actions, skip visuals for all but one per frame
+                let actionsToProcess = Math.floor(item.accumulatedActions);
+                item.accumulatedActions -= actionsToProcess;
+                
+                // Process actions (only show visuals for first action per frame)
+                for (let i = 0; i < actionsToProcess; i++) {
+                    simulateHover(i > 0); // Skip visuals for all but first
+                }
+            });
+            
+            // Batch all visual updates once per frame
+            if (pendingVisualUpdates) {
+                performFlash();
+                updateComboDisplay();
+                pendingVisualUpdates = false;
+            }
+            
+            // Track actual actions per second
+            const now = Date.now();
+            if (now - lastActionsResetTime >= 1000) {
+                actionsLastSecond = actualActionsProcessed;
+                actualActionsProcessed = 0;
+                lastActionsResetTime = now;
+            }
+            
+            autoclickerRAF = requestAnimationFrame(autoclickerLoop);
+        }
+        
+        autoclickerRAF = requestAnimationFrame(autoclickerLoop);
+    }
+    
+    // Legacy function kept for compatibility
     function startAutoclicker(item) {
         if (item.owned === 0 || item.type !== 'clicker') return;
         
-        // Clear existing timers for this item
-        item.timers.forEach(timer => clearInterval(timer));
-        item.timers = [];
+        // Initialize accumulator for this item
+        if (!item.accumulatedActions) {
+            item.accumulatedActions = 0;
+        }
         
-        // Calculate firing rate: owned count = actions per second
-        // So if owned = 5, fire every 200ms (1000ms / 5)
-        const firingInterval = item.interval / item.owned;
-        
-        // Set initial fire time
-        item.nextFireTime = Date.now() + firingInterval;
-        
-        // Create a single interval that fires at the calculated rate
-        const timer = setInterval(() => {
-            simulateHover();
-            // Update next fire time
-            item.nextFireTime = Date.now() + firingInterval;
-        }, firingInterval);
-        item.timers.push(timer);
+        // Restart the unified system
+        startAutoclickerSystem();
     }
     
     // Save game data to localStorage
@@ -370,6 +560,9 @@ window.ColourComboGame = (function() {
                 comboPoints,
                 totalCombosEarned,
                 earlyGameCompleted,
+                soundsMuted,
+                shakeEnabled,
+                devForceMatches,
                 shopItems: shopItems.map(item => ({
                     id: item.id,
                     owned: item.owned
@@ -392,19 +585,29 @@ window.ColourComboGame = (function() {
                 comboPoints = data.comboPoints || 0;
                 totalCombosEarned = data.totalCombosEarned || 0;
                 earlyGameCompleted = data.earlyGameCompleted || false;
+                soundsMuted = data.soundsMuted || false;
+                shakeEnabled = typeof data.shakeEnabled === 'boolean' ? data.shakeEnabled : true;
+                devForceMatches = data.devForceMatches || false;
                 
                 // Restore shop items
                 if (data.shopItems) {
+                    let hasClickers = false;
                     data.shopItems.forEach(savedItem => {
                         const item = shopItems.find(i => i.id === savedItem.id);
                         if (item) {
                             item.owned = savedItem.owned;
-                            if (item.type === 'clicker') {
-                                startAutoclicker(item);
+                            if (item.type === 'clicker' && item.owned > 0) {
+                                hasClickers = true;
+                                item.accumulatedActions = 0;
                             }
                         }
                     });
                     calculateTotalMultiplier();
+                    
+                    // Start unified autoclicker system if any clickers exist
+                    if (hasClickers) {
+                        startAutoclickerSystem();
+                    }
                 }
             }
         } catch (e) {
@@ -422,6 +625,7 @@ window.ColourComboGame = (function() {
 
     // Screen shake effect
     function shakeScreen(comboCount) {
+        if (!shakeEnabled) return;
         const intensity = Math.min((comboCount - 5) * 2, 20);
         document.body.style.setProperty('--shake-intensity', `${intensity}px`);
         document.body.classList.add('screen-shake');
@@ -474,7 +678,7 @@ window.ColourComboGame = (function() {
         // Play sound for high combos (x6+) always, or low combos (x2-x5) only in early game
         const shouldPlaySound = count >= 6 || !hasCompletedEarlyGame;
         
-        if (comboGameEnabled && shouldPlaySound) {
+        if (comboGameEnabled && shouldPlaySound && !soundsMuted) {
             setTimeout(async () => {
                 try {
                     const ctx = audioContext;
@@ -540,26 +744,30 @@ window.ColourComboGame = (function() {
         const shopButton = document.getElementById('shop-button-footer');
         const statsButton = document.getElementById('stats-button-footer');
         if (!comboDisplay) return;
-        
-        // Update high score
-        if (comboCount > highestCombo) {
-            highestCombo = comboCount;
+
+        // Always compute true highest combo from comboStats
+        const trueHighestCombo = Math.max(
+            highestCombo,
+            ...Object.keys(comboStats).map(Number)
+        );
+        if (trueHighestCombo !== highestCombo) {
+            highestCombo = trueHighestCombo;
             saveGameData();
         }
-        
+
         // Update impact scale based on combo (starts at 2x)
         if (comboGameEnabled) {
             const impactScale = 1.02 + (Math.max(0, comboCount - 2) * 0.015);
             document.body.style.setProperty('--impact-scale', impactScale);
         }
-        
+
         // Check if player is in early game (hasn't reached 100 actions/sec)
         const hasCompletedEarlyGame = isEarlyGameComplete();
         const minComboToShow = hasCompletedEarlyGame ? 6 : 2;
-        
+
         // Show/hide combo counter with proper fade behavior
         const shouldShow = comboGameEnabled && comboCount >= minComboToShow;
-        
+
         if (shouldShow) {
             // Show combo immediately (no transition)
             comboDisplay.style.transition = 'none';
@@ -579,14 +787,15 @@ window.ColourComboGame = (function() {
             // Visibility will transition to hidden via CSS
         }
         // If already hidden (comboDisplayShowing = false), don't touch it
-        
+
         // Show shop and stats buttons
         if (comboGameEnabled && shopButton && statsButton) {
             shopButton.textContent = formatNumber(comboPoints);
             shopButton.className = 'shop-button-footer';
-            const nextComboOdds = calculateComboOdds(highestCombo + 1);
-            const oddsText = nextComboOdds >= 0.0001 ? `${nextComboOdds.toFixed(4)}%` : '<0.0001%';
-            statsButton.textContent = `Best: ×${highestCombo} (${oddsText})`;
+            // Dynamically recalculate odds with current luck upgrades
+            const nextComboOdds = calculateComboOdds(highestCombo + 1); // uses current luck
+            const oddsText = formatOddsText(nextComboOdds, highestCombo + 1, true);
+            statsButton.textContent = `Best: ×${highestCombo} (Next ×${highestCombo + 1} odds: ${oddsText})`;
             statsButton.className = 'stats-button-footer';
         }
     }
@@ -601,6 +810,8 @@ window.ColourComboGame = (function() {
             const meetsReqs = meetsRequirements(item);
             const canAfford = comboPoints >= cost && cost !== Infinity && meetsReqs;
             const isPurchased = (item.type === 'multiplier' && cost === Infinity) || (item.type === 'luck' && item.maxOwned !== undefined && item.owned >= item.maxOwned);
+            const atStageLimit = isAtStageLimit(item);
+            const nextStage = getNextStageRequirement(item);
             const isLocked = !meetsReqs && !isPurchased;
             
             // Calculate multiplier info for display
@@ -615,17 +826,27 @@ window.ColourComboGame = (function() {
                 }
             }
             
+            // Stage requirement text
+            let requirementText = '';
+            if (isLocked && item.requiresEarlyGameComplete) {
+                requirementText = '<p class="shop-requirement">Requires: 10 of each autoclicker</p>';
+            } else if (atStageLimit && nextStage) {
+                requirementText = `<p class="shop-requirement">Reach ${nextStage.required} actions/sec to unlock ${nextStage.limit - item.owned} more upgrades</p>`;
+            } else if (isPurchased) {
+                requirementText = '<p class="shop-requirement">All upgrades purchased!</p>';
+            }
+            
             return `
                 <div class="shop-item ${canAfford ? 'affordable' : 'expensive'} ${isPurchased ? 'purchased' : ''} ${isLocked ? 'locked' : ''}" data-item-id="${item.id}">
                     <div class="shop-item-header">
                         <h3>${item.name}</h3>
-                        <span class="shop-item-owned" data-owned>${isPurchased ? 'MAX' : `Owned: ${item.owned}`}</span>
+                        <span class="shop-item-owned" data-owned>${isPurchased ? 'MAX' : atStageLimit ? `${item.owned}/${getCurrentStageLimit(item)}` : `Owned: ${item.owned}`}</span>
                     </div>
                     <p class="shop-item-description">${item.description}</p>
                     ${item.type === 'clicker' ? `<p class="shop-item-stats">+${(1000 / item.interval).toFixed(1)} actions/sec</p>` : ''}
                     ${item.type === 'luck' && item.owned > 0 ? `<p class="shop-item-stats">Current: ${(item.owned * item.luckPerUpgrade * 100).toFixed(2)}% luck</p>` : ''}
                     ${multiplierInfo}
-                    ${isLocked ? '<p class="shop-requirement">Requires: 10 of each autoclicker</p>' : ''}
+                    ${requirementText}
                     <button class="shop-buy-btn" data-item-id="${item.id}" ${!canAfford || isPurchased || isLocked ? 'disabled' : ''}>
                         <span data-button-text>${isPurchased ? 'MAX' : isLocked ? 'Locked' : `Buy for ${formatNumber(cost)}`}</span>
                     </button>
@@ -720,16 +941,44 @@ window.ColourComboGame = (function() {
         modal.innerHTML = `
             <div class="modal-content shop-modal-content">
                 <button class="modal-close" id="close-shop-modal">&times;</button>
+                <button class="sound-mute-btn" id="sound-mute-btn" style="background: ${soundsMuted ? '#FF383F' : '#694EFF'}; border: 2px solid ${soundsMuted ? '#FF383F' : '#694EFF'}; color: #000; padding: 10px 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; font-weight: bold; position: absolute; top: 20px; left: 20px;" title="Toggle sound effects">Sound: ${soundsMuted ? 'OFF' : 'ON'}</button>
+                <button class="shake-toggle-btn" id="shake-toggle-btn" style="background: ${shakeEnabled ? '#694EFF' : '#FF383F'}; border: 2px solid ${shakeEnabled ? '#694EFF' : '#FF383F'}; color: #000; padding: 10px 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; font-weight: bold; position: absolute; top: 20px; left: 160px;" title="Toggle shake effect">Shake: ${shakeEnabled ? 'ON' : 'OFF'}</button>
                 <h2>Shop</h2>
                 <div class="shop-header">
                     <p class="shop-balance">Your Balance: <strong id="shop-balance-amount">${formatNumber(comboPoints)}</strong></p>
                     <div class="shop-stats">
-                        <p class="shop-stat">Actions/sec: <strong id="shop-actions-per-sec">0.0</strong></p>
+                        <p class="shop-stat">Actions/sec: <strong id="shop-actual-actions">0</strong></p>
                         <p class="shop-stat">Average $/sec: <strong id="shop-income-per-sec">$0</strong></p>
                     </div>
                     <p class="shop-info">Total Combos Earned: <span id="shop-total-combos">${totalCombosEarned}</span></p>
                     <button class="view-combo-values-btn" id="view-combo-values-btn">View Combo Values</button>
                 </div>
+                ${devMode ? `
+                    <div class="dev-menu" style="background: rgba(255, 56, 63, 0.1); border: 2px solid #FF383F; padding: 1rem; margin: 1rem 0;">
+                        <h3 style="color: #FF383F; margin-top: 0;">DEV MENU</h3>
+                        <div style="display: grid; gap: 1rem;">
+                            <div>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; cursor: pointer;">
+                                    <input type="checkbox" id="dev-force-matches" ${devForceMatches ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;" />
+                                    Force 100% Match Rate
+                                </label>
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Auto Clickers:</label>
+                                <input type="number" id="dev-autoclickers" min="0" max="100000" value="${shopItems.find(i => i.id === 'auto-clicker').owned}" style="width: 100%; padding: 0.5rem; background: #000; border: 2px solid #694EFF; color: #fff;" />
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Luck Upgrades (max 999 = 99.9% luck):</label>
+                                <input type="number" id="dev-luck" min="0" max="999" value="${shopItems.find(i => i.id === 'luck-upgrade').owned}" style="width: 100%; padding: 0.5rem; background: #000; border: 2px solid #694EFF; color: #fff;" />
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Multiplier Upgrades:</label>
+                                <input type="number" id="dev-multiplier" min="0" max="100000" value="${shopItems.find(i => i.id === 'combo-multiplier').owned}" style="width: 100%; padding: 0.5rem; background: #000; border: 2px solid #694EFF; color: #fff;" />
+                            </div>
+                            <button id="dev-apply-btn" style="background: #FF383F; border: 2px solid #FF383F; color: #000; padding: 10px 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; font-weight: bold;">Apply Changes</button>
+                        </div>
+                    </div>
+                ` : ''}
                 <div id="shop-items-content" class="shop-items"></div>
             </div>
         `;
@@ -742,12 +991,12 @@ window.ColourComboGame = (function() {
         const updateShopValues = () => {
             const balanceEl = document.getElementById('shop-balance-amount');
             const totalCombosEl = document.getElementById('shop-total-combos');
-            const actionsPerSecEl = document.getElementById('shop-actions-per-sec');
+            const actualActionsEl = document.getElementById('shop-actual-actions');
             const incomePerSecEl = document.getElementById('shop-income-per-sec');
             
             if (balanceEl) balanceEl.textContent = formatNumber(comboPoints);
             if (totalCombosEl) totalCombosEl.textContent = totalCombosEarned;
-            if (actionsPerSecEl) actionsPerSecEl.textContent = calculateActionsPerSecond().toFixed(1);
+            if (actualActionsEl) actualActionsEl.textContent = getActualActionsPerSecond();
             if (incomePerSecEl) {
                 const incomeRate = calculateIncomePerSecond(); // Average over last 10 seconds
                 incomePerSecEl.textContent = incomeRate >= 1000000 ? 
@@ -770,6 +1019,30 @@ window.ColourComboGame = (function() {
         
         const closeBtn = document.getElementById('close-shop-modal');
         const comboValuesBtn = document.getElementById('view-combo-values-btn');
+        const muteBtn = document.getElementById('sound-mute-btn');
+        const shakeBtn = document.getElementById('shake-toggle-btn');
+        const devApplyBtn = document.getElementById('dev-apply-btn');
+                // Shake toggle button logic
+                if (shakeBtn) {
+                    shakeBtn.addEventListener('click', () => {
+                        shakeEnabled = !shakeEnabled;
+                        shakeBtn.textContent = shakeEnabled ? 'Shake: ON' : 'Shake: OFF';
+                        shakeBtn.style.background = '#000';
+                        shakeBtn.style.borderColor = shakeEnabled ? '#694EFF' : '#FF383F';
+                        shakeBtn.style.color = shakeEnabled ? '#694EFF' : '#FF383F';
+                        shakeBtn.title = shakeEnabled ? 'Disable shake effect' : 'Enable shake effect';
+                        saveGameData();
+                    });
+                    // Hover effect
+                    shakeBtn.addEventListener('mouseenter', () => {
+                        shakeBtn.style.background = '#000';
+                        shakeBtn.style.color = shakeEnabled ? '#694EFF' : '#FF383F';
+                    });
+                    shakeBtn.addEventListener('mouseleave', () => {
+                        shakeBtn.style.background = shakeEnabled ? '#694EFF' : '#FF383F';
+                        shakeBtn.style.color = '#000';
+                    });
+                }
         
         const closeModal = () => {
             clearInterval(updateInterval);
@@ -777,6 +1050,84 @@ window.ColourComboGame = (function() {
         };
         
         closeBtn.addEventListener('click', closeModal);
+        
+        if (devApplyBtn) {
+            devApplyBtn.addEventListener('click', () => {
+                const forceMatchesCheckbox = document.getElementById('dev-force-matches');
+                const autoClickerInput = document.getElementById('dev-autoclickers');
+                const luckInput = document.getElementById('dev-luck');
+                const multiplierInput = document.getElementById('dev-multiplier');
+                
+                // Update force matches setting
+                if (forceMatchesCheckbox) {
+                    devForceMatches = forceMatchesCheckbox.checked;
+                }
+                
+                // Update auto clickers
+                const autoClickerItem = shopItems.find(i => i.id === 'auto-clicker');
+                const newAutoClickers = parseInt(autoClickerInput.value) || 0;
+                if (autoClickerItem && newAutoClickers !== autoClickerItem.owned) {
+                    autoClickerItem.owned = Math.min(newAutoClickers, 100000);
+                    if (newAutoClickers > 0) {
+                        startAutoclicker(autoClickerItem);
+                    }
+                }
+                
+                // Update luck upgrades
+                const luckItem = shopItems.find(i => i.id === 'luck-upgrade');
+                const newLuck = parseInt(luckInput.value) || 0;
+                if (luckItem) {
+                    luckItem.owned = Math.min(newLuck, 999); // Dev limit: 999 = 99.9% luck
+                }
+                
+                // Update multiplier upgrades
+                const multiplierItem = shopItems.find(i => i.id === 'combo-multiplier');
+                const newMultiplier = parseInt(multiplierInput.value) || 0;
+                if (multiplierItem) {
+                    multiplierItem.owned = Math.min(newMultiplier, 100000); // Dev limit: 100000
+                    calculateTotalMultiplier();
+                }
+                
+                // Save and update UI
+                saveGameData();
+                updateComboDisplay();
+                updateShopUI();
+                
+                console.log('Dev values applied!');
+            });
+            
+            // Add hover effect for dev button
+            devApplyBtn.addEventListener('mouseenter', () => {
+                devApplyBtn.style.background = '#000';
+                devApplyBtn.style.color = '#FF383F';
+            });
+            devApplyBtn.addEventListener('mouseleave', () => {
+                devApplyBtn.style.background = '#FF383F';
+                devApplyBtn.style.color = '#000';
+            });
+        }
+        
+        if (muteBtn) {
+            muteBtn.addEventListener('click', () => {
+                soundsMuted = !soundsMuted;
+                muteBtn.textContent = soundsMuted ? 'Sound: OFF' : 'Sound: ON';
+                muteBtn.style.background = '#000';
+                muteBtn.style.borderColor = soundsMuted ? '#FF383F' : '#694EFF';
+                muteBtn.style.color = soundsMuted ? '#FF383F' : '#694EFF';
+                muteBtn.title = soundsMuted ? 'Unmute sound effects' : 'Mute sound effects';
+                saveGameData();
+            });
+            
+            // Add hover effect
+            muteBtn.addEventListener('mouseenter', () => {
+                muteBtn.style.background = '#000';
+                muteBtn.style.color = soundsMuted ? '#FF383F' : '#694EFF';
+            });
+            muteBtn.addEventListener('mouseleave', () => {
+                muteBtn.style.background = soundsMuted ? '#FF383F' : '#694EFF';
+                muteBtn.style.color = '#000';
+            });
+        }
         
         if (comboValuesBtn) {
             comboValuesBtn.addEventListener('click', () => {
@@ -809,45 +1160,56 @@ window.ColourComboGame = (function() {
         
         ctx.fillStyle = '#FF383F';
         ctx.font = 'bold 48px Arial';
-        ctx.fillText(`Highest Combo: ×${highestCombo}`, canvas.width / 2, 120);
-        
+        // Show odds for highest combo next to it
+        const highestComboOdds = formatOddsText(calculateComboOdds(highestCombo), highestCombo, true);
+        ctx.fillText(`Highest Combo: ×${highestCombo} (${highestComboOdds})`, canvas.width / 2, 120);
+
         const totalCombos = Object.values(comboStats).reduce((a, b) => a + b, 0);
         ctx.fillStyle = '#FFFFA3';
         ctx.font = 'bold 24px Arial';
         ctx.fillText(`Total Combos: ${totalCombos}`, canvas.width / 2, 155);
-        ctx.fillText(`Currency: $${comboPoints}`, canvas.width / 2, 185);
-        
-        const sortedByCount = Object.entries(comboStats)
-            .sort((a, b) => a[1] - b[1])
+        ctx.fillText(`Currency: ${formatCurrencyCompact(comboPoints)}`, canvas.width / 2, 185);
+
+        // Sort combos by combo level (number), descending, and show top 5 (excluding highest, which is always shown at the top)
+        const sortedCombos = Object.keys(comboStats)
+            .map(Number)
+            .filter(combo => combo !== highestCombo)
+            .sort((a, b) => b - a)
             .slice(0, 5);
-        
-        if (sortedByCount.length > 0) {
+
+        if (sortedCombos.length > 0) {
             ctx.fillStyle = '#FFFFA3';
             ctx.font = 'bold 24px Arial';
-            ctx.fillText('Top 5 Rarest Combos Achieved:', canvas.width / 2, 225);
-            
-            const maxCount = Math.max(...sortedByCount.map(([_, count]) => count));
+            ctx.fillText('Top 5 Highest Combos:', canvas.width / 2, 225);
+
+            const maxCount = Math.max(...sortedCombos.map(combo => comboStats[combo]));
             const startY = 265;
             const barHeight = 40;
             const barSpacing = 60;
             const maxBarWidth = 500;
-            
-            sortedByCount.forEach(([combo, count], index) => {
+
+            sortedCombos.forEach((combo, index) => {
+                const count = comboStats[combo];
                 const y = startY + (index * barSpacing);
                 const barWidth = (count / maxCount) * maxBarWidth;
-                
+
                 ctx.fillStyle = '#222';
                 ctx.fillRect(140, y, maxBarWidth, barHeight);
-                
+
                 ctx.fillStyle = '#694EFF';
                 ctx.fillRect(140, y, barWidth, barHeight);
-                
+
+                // Show odds in the center of the bar
+                const oddsText = formatOddsText(calculateComboOdds(Number(combo)), Number(combo), true);
                 ctx.fillStyle = '#FFFFA3';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(oddsText, 140 + maxBarWidth / 2, y + 27);
+
                 ctx.font = 'bold 20px Arial';
                 ctx.textAlign = 'right';
                 ctx.fillText(`×${combo}`, 130, y + 27);
-                
-                ctx.fillStyle = '#FFFFA3';
+
                 ctx.textAlign = 'left';
                 ctx.fillText(count.toString(), 650, y + 27);
             });
@@ -881,15 +1243,16 @@ window.ColourComboGame = (function() {
         modal.id = 'combo-values-modal';
         modal.className = 'modal-overlay';
         
-        // Calculate values for x2 through x15 with current multiplier
+        // Calculate values for x2 through x20 with current multiplier
         const currentMultiplier = comboMultiplier;
         const comboValuesHTML = [];
         
-        for (let combo = 2; combo <= 15; combo++) {
+        for (let combo = 2; combo <= 20; combo++) {
             const baseValue = getComboValue(combo);
             const actualValue = Math.floor(baseValue * currentMultiplier);
-            const odds = calculateComboOdds(combo);
-            const oddsText = odds >= 0.0001 ? odds.toFixed(4) + '%' : '<0.0001%';
+            // Dynamically recalculate odds with current luck upgrades
+            const odds = calculateComboOdds(combo); // uses current luck
+            const oddsText = formatOddsText(odds, combo, true); // show as 1/x odds
             comboValuesHTML.push(`
                 <div class="combo-value-row">
                     <div class="combo-value-label">×${combo}</div>
@@ -959,10 +1322,7 @@ window.ColourComboGame = (function() {
                     <div class="stats-summary">
                         <p><strong>Total Combos:</strong> <span id="stat-total-combos">${Object.values(comboStats).reduce((a, b) => a + b, 0)}</span></p>
                         <p><strong>Highest:</strong> <span id="stat-highest">×${highestCombo}</span></p>
-                        <p><strong>Next ×${highestCombo + 1} Odds:</strong> <span id="stat-next-odds">${(() => {
-                            const odds = calculateComboOdds(highestCombo + 1);
-                            return odds >= 0.0001 ? odds.toFixed(4) + '%' : '<0.0001%';
-                        })()}</span></p>
+                        <p><strong>Next ×${highestCombo + 1} Odds:</strong> <span id="stat-next-odds">${formatOddsText(calculateComboOdds(highestCombo + 1), highestCombo + 1, true)}</span></p>
                         <p><strong>Currency:</strong> <span id="stat-currency">${formatCurrencyCompact(comboPoints)}</span></p>
                     </div>
                     <div class="modal-buttons">
@@ -983,26 +1343,36 @@ window.ColourComboGame = (function() {
             const nextOddsEl = document.getElementById('stat-next-odds');
             const currencyEl = document.getElementById('stat-currency');
             const totalEarnedEl = document.getElementById('stat-total-earned');
-            
+
+            // Always compute true highest combo from comboStats
+            const trueHighestCombo = Math.max(
+                highestCombo,
+                ...Object.keys(comboStats).map(Number)
+            );
+            if (trueHighestCombo !== highestCombo) {
+                highestCombo = trueHighestCombo;
+                saveGameData();
+            }
+
             if (totalCombosEl) totalCombosEl.textContent = Object.values(comboStats).reduce((a, b) => a + b, 0);
             if (highestEl) highestEl.textContent = `×${highestCombo}`;
             if (nextOddsEl) {
                 const odds = calculateComboOdds(highestCombo + 1);
-                nextOddsEl.textContent = odds >= 0.0001 ? odds.toFixed(4) + '%' : '<0.0001%';
+                nextOddsEl.textContent = formatOddsText(odds, highestCombo + 1, true);
             }
             if (currencyEl) currencyEl.textContent = formatCurrencyCompact(comboPoints);
             if (totalEarnedEl) totalEarnedEl.textContent = totalCombosEarned;
-            
+
             // Update bar graphs dynamically
             const maxCount = Math.max(...Object.values(comboStats), 1);
             document.querySelectorAll('.stat-row').forEach(row => {
                 const combo = parseInt(row.dataset.combo);
                 const count = comboStats[combo] || 0;
                 const percentage = (count / maxCount) * 100;
-                
+
                 const barEl = row.querySelector('[data-bar]');
                 const countEl = row.querySelector('[data-count]');
-                
+
                 if (barEl) barEl.style.width = `${percentage}%`;
                 if (countEl) countEl.textContent = count;
             });
@@ -1148,7 +1518,7 @@ window.ColourComboGame = (function() {
         handleHover(color) {
             if (!comboGameEnabled) return;
 
-            if (lastComboColor === color || devMode) {
+            if (lastComboColor === color || devForceMatches) {
                 comboCount++;
                 if (comboCount >= 3) {
                     showComboPopup(comboCount, color);
@@ -1165,14 +1535,16 @@ window.ColourComboGame = (function() {
                     saveGameData();
                     
                     // Play special sound based on combo achieved
-                    if (comboCount >= 10) {
-                        const godlikeAudio = new Audio('./assets/audio/godlike.mp3');
-                        godlikeAudio.volume = 1.0;
-                        godlikeAudio.play().catch(e => console.log('Failed to play godlike sound:', e));
-                    } else if (comboCount === 9) {
-                        const holyShitAudio = new Audio('./assets/audio/holyshit.mp3');
-                        holyShitAudio.volume = 1.0;
-                        holyShitAudio.play().catch(e => console.log('Failed to play holy shit sound:', e));
+                    if (!soundsMuted) {
+                        if (comboCount >= 10) {
+                            const godlikeAudio = new Audio('./assets/audio/godlike.mp3');
+                            godlikeAudio.volume = 1.0;
+                            godlikeAudio.play().catch(e => console.log('Failed to play godlike sound:', e));
+                        } else if (comboCount === 9) {
+                            const holyShitAudio = new Audio('./assets/audio/holyshit.mp3');
+                            holyShitAudio.volume = 1.0;
+                            holyShitAudio.play().catch(e => console.log('Failed to play holy shit sound:', e));
+                        }
                     }
                 }
                 comboCount = 1;
